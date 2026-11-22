@@ -617,6 +617,25 @@
     box-shadow: 0 0 12px rgba(168, 85, 247, 0.45);
   }
 
+
+  /* === NIVELES DEL CLUB === */
+  #statusBanners { top: 160px; }
+  #levelBar {
+    position: absolute; top: 128px; left: 50%; transform: translateX(-50%);
+    z-index: 18; display: flex; gap: 10px; align-items: center;
+    background: rgba(10, 8, 22, 0.82); border: 1px solid #00f5d4; color: #00f5d4;
+    border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 900;
+    letter-spacing: 1.4px; white-space: nowrap; pointer-events: none;
+  }
+  #levelBanner {
+    position: absolute; top: 32%; left: 0; right: 0; z-index: 40; text-align: center;
+    pointer-events: none; opacity: 0; transition: opacity 0.35s;
+    text-shadow: 0 0 18px currentColor; text-transform: uppercase;
+  }
+  #levelBanner.show { opacity: 1; }
+  #levelBanner .lb-title { font-size: 38px; font-weight: 900; letter-spacing: 6px; }
+  #levelBanner .lb-sub { font-size: 13px; font-weight: 800; letter-spacing: 3px; margin-top: 6px; }
+
 </style>
 </head>
 <body>
@@ -679,6 +698,10 @@
   <!-- Feedback flotante -->
   <div id="beatFeedback">ON BEAT!</div>
 
+  <!-- Nivel del club: barra y aviso de nivel -->
+  <div id="levelBar" class="hidden"><span id="levelBarName"></span><span id="levelBarTimer"></span></div>
+  <div id="levelBanner"></div>
+
 
   <!-- Botones táctiles de ítems junto al PAD -->
   <div id="mobileItemActions" class="hidden">
@@ -708,19 +731,19 @@
   <div id="startScreen" class="overlay">
     <div class="title-badge">Techno Dungeon Prototype</div>
     <h1>RAVE OF THE CIRCLE</h1>
-    <p class="subtitle">Baila al ritmo del bombo, usa los pisos pegajosos y resbaladizos, guía al Raver Perdido, esquiva al NPC Espejo y abre la puerta clavándote.</p>
+    <p class="subtitle">Baila al ritmo del bombo, usa los pisos pegajosos y resbaladizos, esquiva a los NPCs y abre la puerta clavándote para bajar la escalera. Tienes 2 minutos por nivel: si no llegas, caes al siguiente.</p>
 
     <div class="legend-box">
       <div class="legend-row"><span class="dot" style="background:#a855f7;box-shadow:0 0 8px #a855f7"></span><span><b>Piso Pegajoso:</b> Te frena (1 pulso para salir, no puedes deslizarte).</span></div>
       <div class="legend-row"><span class="dot" style="background:#38bdf8;box-shadow:0 0 8px #38bdf8"></span><span><b>Piso Resbaloso:</b> Te desliza +1 casilla extra en tu dirección.</span></div>
       <div class="legend-row"><span class="dot" style="background:#2dd4bf;box-shadow:0 0 8px #2dd4bf"></span><span><b>Raver Perdido:</b> Con combo ≥ x3 cerca te sigue; llévalo a su grupo por +1 Vinyl.</span></div>
-      <div class="legend-row"><span class="dot" style="background:#f59e0b;box-shadow:0 0 8px #f59e0b"></span><span><b>Puerta Sellada:</b> Clávate (⚓) frente a ella y haz 5 pasos al ritmo.</span></div>
+      <div class="legend-row"><span class="dot" style="background:#f59e0b;box-shadow:0 0 8px #f59e0b"></span><span><b>Puerta Sellada:</b> Clávate (⚓) frente a ella y haz 5 pasos al ritmo. Detrás está la escalera al siguiente nivel.</span></div>
       <div class="legend-row"><span class="dot" style="background:#e0f2fe;box-shadow:0 0 8px #38bdf8"></span><span><b>NPC Espejo:</b> A menos de 8 casillas imita tus pasos de forma inversa.</span></div>
     </div>
 
-    <button id="btnStartProcedural" class="btn-primary" type="button">▶ Pista Aleatoria</button>
-    <button id="btnStartMainStage" class="btn-arena-custom" type="button">🎛 Main Stage (Mapa Custom)</button>
-    <button id="btnStartClub" class="btn-arena-custom" type="button">🏛 Club Procedural (Salas)</button>
+    <button id="btnStartProcedural" class="btn-primary" type="button" style="display:none">▶ Pista Aleatoria</button>
+    <button id="btnStartMainStage" class="btn-arena-custom" type="button" style="display:none">🎛 Main Stage (Mapa Custom)</button>
+    <button id="btnStartClub" class="btn-primary" type="button">▶ Club Procedural</button>
     <button id="btnOpenSettingsStart" class="btn-secondary" type="button">⚙ Configurar Parámetros</button>
   </div>
 
@@ -739,6 +762,21 @@
     <button id="btnOpenSettingsOver" class="btn-secondary" type="button">⚙ Ajustar Parámetros</button>
   </div>
 
+  <!-- Pantalla de Victoria -->
+  <div id="victoryScreen" class="overlay hidden">
+    <div class="title-badge">¡Saliste del Club!</div>
+    <h1>VICTORIA</h1>
+    <p class="subtitle">Bajaste la escalera del último nivel y escapaste del club.</p>
+    <div class="legend-box" style="text-align:center">
+      <div style="font-size:14px;margin-bottom:6px">Pasos totales: <b id="vicSteps" style="color:#00f5d4">0</b></div>
+      <div style="font-size:14px;margin-bottom:6px">Combo máximo: <b id="vicCombo" style="color:#ff2a85">x1</b></div>
+      <div style="font-size:14px;margin-bottom:6px">Vinyls recogidos: <b id="vicScore" style="color:#fee440">0</b></div>
+      <div style="font-size:14px">Vidas restantes: <b id="vicLives" style="color:#ff2a85">0</b></div>
+    </div>
+    <button id="btnVictoryAgain" class="btn-primary" type="button">↻ Jugar de Nuevo</button>
+    <button id="btnVictoryMenu" class="btn-arena-custom" type="button">🏠 Menú Principal</button>
+  </div>
+
   <!-- Modal de Parámetros -->
   <div id="settingsModal" class="overlay hidden">
     <div class="title-badge">Control de Pista</div>
@@ -746,8 +784,8 @@
 
     <div class="settings-card">
       <div class="setting-item">
-        <div class="setting-header"><span>Velocidad Techno (BPM)</span><span id="valBpm" class="setting-val">128 BPM</span></div>
-        <input id="inpBpm" type="range" min="80" max="175" value="128">
+        <div class="setting-header"><span>Velocidad Techno (BPM) · la define cada nivel</span><span id="valBpm" class="setting-val">128 BPM</span></div>
+        <input id="inpBpm" type="range" min="80" max="175" value="128" disabled>
       </div>
       <div class="setting-item">
         <div class="setting-header"><span>Tolerancia de Ritmo</span><span id="valTolerance" class="setting-val">94%</span></div>
@@ -812,6 +850,33 @@
   };
 
   let config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+
+  // =========================================================================
+  // NIVELES DEL CLUB: BPM, colores y música de cada nivel.
+  // Notas de música en números MIDI (0 = silencio). Patrones de 16 pasos (semicorcheas).
+  // =========================================================================
+  const LEVEL_THEMES = [
+    { name: 'Sótano Neón', bpm: 110, accent: '#00f5d4',
+      pal: [[0, 245, 212], [59, 130, 246], [255, 42, 133]],
+      music: { bass: [33,0,0,33, 0,0,36,0, 33,0,0,33, 0,38,0,36], bassWave: 'sawtooth', cut: 320, cutAccent: 0, q: 4, decay: 0.14, gain: 0.2,
+               lead: [69,0,0,0, 0,0,72,0, 0,0,76,0, 0,0,72,0], leadWave: 'triangle', leadVol: 0.07, leadDur: 0.2, leadCut: 2200,
+               hats: [0,0,.09,0, 0,0,.09,0, 0,0,.09,0, 0,0,.09,0], ticks: 0.025, clap: [4, 12] } },
+    { name: 'Club Ultravioleta', bpm: 120, accent: '#c084fc',
+      pal: [[168, 85, 247], [255, 42, 133], [0, 229, 255]],
+      music: { bass: [38,38,0,50, 38,0,41,38, 0,38,50,0, 43,38,0,41], bassWave: 'sawtooth', cut: 600, cutAccent: 700, q: 11, decay: 0.1, gain: 0.2,
+               lead: [62,0,65,0, 69,0,65,0, 62,0,65,0, 72,0,69,0], leadWave: 'square', leadVol: 0.04, leadDur: 0.09, leadCut: 2600,
+               hats: [0,0,.09,0, 0,0,.09,0, 0,0,.09,0, 0,0,.09,0], ticks: 0.03, clap: [4, 12] } },
+    { name: 'Horno Industrial', bpm: 130, accent: '#fb923c',
+      pal: [[251, 146, 60], [37, 99, 235], [250, 204, 21]],
+      music: { bass: [28,0,28,28, 0,28,28,0, 28,28,0,28, 28,0,31,28], bassWave: 'sawtooth', cut: 380, cutAccent: 200, q: 8, decay: 0.1, gain: 0.24,
+               lead: [0,0,64,0, 0,0,0,64, 0,0,64,0, 0,0,67,0], leadWave: 'sawtooth', leadVol: 0.06, leadDur: 0.1, leadCut: 1800,
+               hats: [.05,.05,.11,.05, .05,.05,.11,.05, .05,.05,.11,.05, .05,.05,.11,.05], ticks: 0, clap: [4, 12, 15] } },
+    { name: 'Matriz Final', bpm: 140, accent: '#ff3b6b',
+      pal: [[255, 42, 85], [0, 229, 255], [139, 92, 246]],
+      music: { bass: [0,0,36,0, 0,0,36,0, 0,0,36,0, 0,0,48,0], bassWave: 'sawtooth', cut: 520, cutAccent: 300, q: 6, decay: 0.12, gain: 0.24,
+               lead: [60,63,67,72, 67,63,67,72, 58,62,65,70, 65,62,65,70], leadWave: 'sawtooth', leadVol: 0.05, leadDur: 0.1, leadCut: 3200,
+               hats: [.05,.05,.1,.05, .05,.05,.1,.05, .05,.05,.1,.05, .05,.12,.12,.12], ticks: 0, clap: [4, 12] } }
+  ];
 
   const state = {
     screen: 'start',
@@ -914,11 +979,67 @@
           if (state.screen === 'playing') onBeatTick();
         }, delayMs);
       }
+      // Modo club: la música depende del nivel actual
+      if (state.mapMode === 'rooms' && state.levelTheme) {
+        this.playThemedStep(state.levelTheme.music, step, time);
+        return;
+      }
       if (step % 4 === 2) this.playHat(time, 0.09);
       else if (step % 2 === 1) this.playHat(time, 0.03);
       if (step === 4 || step === 12) this.playClap(time);
       const note = this.bassNotes[step % this.bassNotes.length];
       this.playBass(time, note, step);
+    },
+
+    playThemedStep(m, step, time) {
+      const hv = m.hats[step % 16];
+      if (hv > 0) this.playHat(time, hv);
+      else if (m.ticks && step % 2 === 1) this.playHat(time, m.ticks);
+      if (m.clap.includes(step)) this.playClap(time);
+      const b = m.bass[step % m.bass.length];
+      if (b) this.playThemedBass(m, time, 440 * Math.pow(2, (b - 69) / 12), step);
+      const l = m.lead[step % m.lead.length];
+      if (l) this.playLead(m, time, 440 * Math.pow(2, (l - 69) / 12));
+    },
+
+    playThemedBass(m, time, freq, step) {
+      const osc = this.ctx.createOscillator();
+      const filter = this.ctx.createBiquadFilter();
+      const gain = this.ctx.createGain();
+      osc.type = m.bassWave;
+      osc.frequency.setValueAtTime(freq, time);
+      const cutoff = m.cut + (step % 4 === 0 ? (m.cutAccent || 0) : 0) + (state.dropTimer > 0 ? 450 : 0);
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(Math.max(120, cutoff), time);
+      filter.Q.value = m.q;
+      gain.gain.setValueAtTime(m.gain, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + m.decay);
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(time);
+      osc.stop(time + m.decay + 0.01);
+    },
+
+    playLead(m, time, freq) {
+      const filter = this.ctx.createBiquadFilter();
+      const gain = this.ctx.createGain();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(m.leadCut, time);
+      gain.gain.setValueAtTime(m.leadVol, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + m.leadDur);
+      filter.connect(gain);
+      gain.connect(this.ctx.destination);
+      const detunes = m.leadWave === 'triangle' ? [0] : [-7, 7];
+      for (const d of detunes) {
+        const osc = this.ctx.createOscillator();
+        osc.type = m.leadWave;
+        osc.frequency.setValueAtTime(freq, time);
+        osc.detune.setValueAtTime(d, time);
+        osc.connect(filter);
+        osc.start(time);
+        osc.stop(time + m.leadDur + 0.01);
+      }
     },
 
     playKick(time) {
@@ -2399,7 +2520,20 @@ function generateArena() {
     }
 
     ctx.save();
-    ctx.fillStyle = state.dropTimer > 0 ? '#0c061c' : '#06050e';
+    const lvTheme = (state.mapMode === 'rooms' && state.levelTheme) ? state.levelTheme : null;
+    // Colores vivos del nivel: cada beat la paleta avanza un color (transición rápida en el golpe del bombo)
+    let lvA = null, lvB = null, lvC = null;
+    if (lvTheme) {
+      const pal = lvTheme.pal, n = pal.length;
+      const ci = state.beatIndex % n, pi = (state.beatIndex + n - 1) % n;
+      const k = Math.min(1, phase * 5);
+      const mixC = (a, b) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+      lvA = mixC(pal[pi], pal[ci]);
+      lvB = mixC(pal[(pi + 1) % n], pal[(ci + 1) % n]);
+      lvC = mixC(pal[(pi + 2) % n], pal[(ci + 2) % n]);
+    }
+    const rgbaOf = (c, a) => 'rgba(' + Math.round(c[0]) + ',' + Math.round(c[1]) + ',' + Math.round(c[2]) + ',' + a + ')';
+    ctx.fillStyle = state.dropTimer > 0 ? '#0c061c' : (lvTheme ? rgbaOf([lvA[0] * 0.09, lvA[1] * 0.09, lvA[2] * 0.09], 1) : '#06050e');
     ctx.fillRect(0, 0, w, h);
 
     if (state.shake > 0.1) {
@@ -2411,7 +2545,7 @@ function generateArena() {
 
     const laserAngle = Math.sin(now * 0.0012) * 0.6;
     const grad1 = ctx.createLinearGradient(w * 0.2, 0, w * 0.8 + Math.sin(laserAngle) * 150, h);
-    grad1.addColorStop(0, state.dropTimer > 0 ? 'rgba(254, 228, 64, 0.11)' : 'rgba(255, 42, 133, 0.08)');
+    grad1.addColorStop(0, state.dropTimer > 0 ? 'rgba(254, 228, 64, 0.11)' : (lvTheme ? rgbaOf(lvA, 0.16 + beatPulse * 0.1) : 'rgba(255, 42, 133, 0.08)'));
     grad1.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = grad1;
     ctx.beginPath();
@@ -2471,7 +2605,49 @@ function generateArena() {
       }
     }
 
-    ctx.strokeStyle = state.dropTimer > 0 ? '#fee440' : 'rgba(0, 245, 212, 0.45)';
+    // Pista de baile viva (solo color/luz por código; no toca los sprites de personajes ni objetos):
+    // piso en damero con dos colores que se intercambian cada beat, paredes en el tercer color,
+    // destello al golpe del bombo y focos de luz que se mueven por la pista.
+    if (lvTheme) {
+      const gx0 = Math.max(0, Math.floor(-camX / ts) - 1), gx1 = Math.min(size - 1, Math.ceil((w - camX) / ts) + 1);
+      const gy0 = Math.max(0, Math.floor(-camY / ts) - 1), gy1 = Math.min(size - 1, Math.ceil((h - camY) / ts) + 1);
+      ctx.save();
+      ctx.globalCompositeOperation = 'color';
+      for (let gy = gy0; gy <= gy1; gy++) {
+        for (let gx = gx0; gx <= gx1; gx++) {
+          const isWall = state.tiles[gy]?.[gx] === 'wall';
+          const even = (gx + gy + state.beatIndex) % 2 === 0;
+          ctx.fillStyle = rgbaOf(isWall ? lvC : (even ? lvA : lvB), isWall ? 0.5 : 0.5 + beatPulse * 0.2);
+          ctx.fillRect(gx * ts, gy * ts, ts, ts);
+        }
+      }
+      ctx.globalCompositeOperation = 'lighter';
+      for (let gy = gy0; gy <= gy1; gy++) {
+        for (let gx = gx0; gx <= gx1; gx++) {
+          if (state.tiles[gy]?.[gx] === 'wall') continue;
+          if ((gx + gy + state.beatIndex) % 2 !== 0) continue;
+          ctx.fillStyle = rgbaOf(lvA, beatPulse * 0.14);
+          ctx.fillRect(gx * ts, gy * ts, ts, ts);
+        }
+      }
+      const pcx = (state.player.vx + 0.5) * ts, pcy = (state.player.vy + 0.5) * ts;
+      const pal = lvTheme.pal;
+      for (let i = 0; i < 3; i++) {
+        const a = now * 0.0006 + i * 2.094;
+        const sx = pcx + Math.cos(a * 1.3) * ts * 5;
+        const sy = pcy + Math.sin(a) * ts * 6;
+        const r = ts * (4 + beatPulse * 1.4);
+        const col = pal[(i + state.beatIndex) % pal.length];
+        const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, r);
+        g.addColorStop(0, rgbaOf(col, 0.2 + beatPulse * 0.2));
+        g.addColorStop(1, rgbaOf(col, 0));
+        ctx.fillStyle = g;
+        ctx.fillRect(sx - r, sy - r, r * 2, r * 2);
+      }
+      ctx.restore();
+    }
+
+    ctx.strokeStyle = state.dropTimer > 0 ? '#fee440' : (lvTheme ? rgbaOf(lvA, 0.85) : 'rgba(0, 245, 212, 0.45)');
     ctx.lineWidth = 3;
     ctx.strokeRect(0, 0, size * ts, size * ts);
 
@@ -3159,8 +3335,6 @@ function generateArena() {
   onBeatTick = function() {
     if (state.screen !== 'playing') return;
 
-    const missedPassiveBeat = (state.beatIndex > 0 && !state.playerMovedThisBeat && necroState.hasMovedOnce);
-
     // Guardar posiciones y dirs previos por si están congelados o parpadeando
     const prevObsSnapshot = state.obstacles.map(o => ({
       ref: o,
@@ -3199,10 +3373,6 @@ function generateArena() {
       }
     }
 
-    if (missedPassiveBeat && state.screen === 'playing') {
-      damagePlayer('Perdiste el ritmo demasiadas veces (Missed Beat).', true);
-    }
-
     renderNecroHud();
   };
 
@@ -3213,9 +3383,6 @@ function generateArena() {
     const timing = checkBeatWindow();
     if (!timing.onBeat) {
       _origToggleAnchor();
-      if (necroState.hasMovedOnce) {
-        damagePlayer('Perdiste el ritmo al clavarte (Missed Beat).', true);
-      }
       return;
     }
     necroState.hasMovedOnce = true;
@@ -3233,9 +3400,6 @@ function generateArena() {
     const timing = checkBeatWindow();
     if (!timing.onBeat) {
       _origTryMovePlayer(dx, dy);
-      if (necroState.hasMovedOnce) {
-        damagePlayer('Perdiste el ritmo en la pista (Missed Beat).', true);
-      }
       return;
     }
 
@@ -3456,6 +3620,295 @@ function generateArena() {
   btnUseSpecialMobile.addEventListener('click', activateSpecialItem);
   slotConsumableEl.addEventListener('click', activateConsumableItem);
   slotSpecialEl.addEventListener('click', activateSpecialItem);
+
+  // =========================================================================
+  // NIVELES DEL CLUB (estructura tipo Crypt of the NecroDancer)
+  // 4 niveles, 2 minutos cada uno, BPM y música propios, más dificultad en cada uno.
+  // La escalera está detrás de la puerta sellada: ábrela con ritmo y pisa la escalera.
+  // =========================================================================
+  const TOTAL_LEVELS = LEVEL_THEMES.length;
+  const LEVEL_SECONDS = 120;
+  const levelState = { idx: 0, timeLeft: LEVEL_SECONDS, busy: false, victory: false };
+
+  // Dificultad por nivel (ajustable):
+  //  keepMobs   = fracción de NPCs móviles de las salas que se conservan (bouncer, dasher, dancer, dj_bot)
+  //  extraMobs  = NPCs móviles extra repartidos por el club
+  //  hazardPct  = fracción de pisos normales que pasan a pegajoso/resbaloso
+  //  vinyls     = Vinyls (vidas extra) disponibles en el nivel
+  //  removeItems= ítems del suelo (Shades/Cigarros/Drop) que se quitan
+  const LEVEL_DIFFICULTY = [
+    { keepMobs: 0.5, extraMobs: 0,  extraTypes: [],                                      hazardPct: 0,    vinyls: 5, removeItems: 0 },
+    { keepMobs: 0.8, extraMobs: 5,  extraTypes: ['dancer', 'bouncer'],                    hazardPct: 0.04, vinyls: 4, removeItems: 0 },
+    { keepMobs: 1,   extraMobs: 12, extraTypes: ['dancer', 'bouncer', 'dasher'],          hazardPct: 0.08, vinyls: 3, removeItems: 1 },
+    { keepMobs: 1,   extraMobs: 22, extraTypes: ['bouncer', 'dasher', 'dj_bot', 'dancer'], hazardPct: 0.13, vinyls: 2, removeItems: 2 }
+  ];
+
+  const levelBarEl = document.getElementById('levelBar');
+  const levelNameEl = document.getElementById('levelBarName');
+  const levelTimerEl = document.getElementById('levelBarTimer');
+  const levelBannerEl = document.getElementById('levelBanner');
+  const victoryScreenEl = document.getElementById('victoryScreen');
+
+  function updateLevelHud() {
+    if (state.mapMode !== 'rooms' || !state.levelTheme) return;
+    const th = state.levelTheme;
+    const t = Math.max(0, Math.ceil(levelState.timeLeft));
+    levelBarEl.style.borderColor = th.accent;
+    levelBarEl.style.color = th.accent;
+    levelBarEl.style.boxShadow = '0 0 12px ' + th.accent + '55';
+    levelNameEl.textContent = 'NIVEL ' + (levelState.idx + 1) + '/' + TOTAL_LEVELS + ' · ' + th.bpm + ' BPM';
+    levelTimerEl.textContent = '⏱ ' + Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
+    levelTimerEl.style.color = t <= 15 ? '#ff2a85' : '';
+  }
+
+  let levelBannerTimer = null;
+  function showLevelBanner(idx, reason) {
+    const th = LEVEL_THEMES[idx];
+    let top = '';
+    if (reason === 'time') top = '<div class="lb-sub" style="color:#ff2a85">⏳ Se acabó el tiempo · caíste</div>';
+    else if (reason === 'stairs') top = '<div class="lb-sub" style="color:#00f5d4">🪜 Bajaste la escalera</div>';
+    levelBannerEl.innerHTML = top +
+      '<div class="lb-title">NIVEL ' + (idx + 1) + '</div>' +
+      '<div class="lb-sub">' + th.name + ' · ' + th.bpm + ' BPM</div>';
+    levelBannerEl.style.color = th.accent;
+    levelBannerEl.classList.add('show');
+    clearTimeout(levelBannerTimer);
+    levelBannerTimer = setTimeout(() => levelBannerEl.classList.remove('show'), 2600);
+  }
+
+  // Alcanzabilidad por piso desde (sx, sy), ignorando obstáculos (igual que el generador del club)
+  function levelReachable(sx, sy) {
+    const size = config.gridSize;
+    const dist = new Map([[sy * size + sx, 0]]);
+    const q = [[sx, sy]];
+    for (let i = 0; i < q.length; i++) {
+      const [x, y] = q[i];
+      const d = dist.get(y * size + x);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= size || ny >= size) continue;
+        if (state.tiles[ny][nx] === 'wall') continue;
+        const k = ny * size + nx;
+        if (dist.has(k)) continue;
+        dist.set(k, d + 1);
+        q.push([nx, ny]);
+      }
+    }
+    return dist;
+  }
+
+  function levelCellTaken(x, y) {
+    return state.obstacles.some(o => o.x === x && o.y === y) ||
+      state.collectibles.some(c => c.x === x && c.y === y) ||
+      state.lostRavers.some(r => r.x === x && r.y === y) ||
+      state.groupTargets.some(g => g.x === x && g.y === y) ||
+      necroState.floorItems.some(fi => fi.x === x && fi.y === y) ||
+      (state.door && state.door.x === x && state.door.y === y) ||
+      (state.player.x === x && state.player.y === y);
+  }
+
+  function levelShuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function applyLevelDifficulty(idx) {
+    const dif = LEVEL_DIFFICULTY[idx];
+    const size = config.gridSize;
+    const dist = levelReachable(state.player.x, state.player.y);
+    const cellOf = k => [k % size, Math.floor(k / size)];
+
+    // 0) La escalera siempre está detrás de una puerta: si el generador no dejó puerta, se coloca en el punto más lejano
+    if (!state.door) {
+      let best = null, bd = -1;
+      dist.forEach((d, k) => {
+        const [x, y] = cellOf(k);
+        if (d > bd && !levelCellTaken(x, y)) { bd = d; best = [x, y]; }
+      });
+      if (best) state.door = { x: best[0], y: best[1], unlocked: false, progress: 0 };
+    }
+
+    // 1) Menos NPCs móviles en los primeros niveles
+    const MOBILE = ['bouncer', 'dasher', 'dancer', 'dj_bot'];
+    state.obstacles = state.obstacles.filter(o => !MOBILE.includes(o.type) || Math.random() < dif.keepMobs);
+
+    // 2) NPCs móviles extra (lejos del jugador al empezar)
+    if (dif.extraMobs > 0 && dif.extraTypes.length) {
+      const cand = [];
+      dist.forEach((d, k) => {
+        const [x, y] = cellOf(k);
+        if (d >= 7 && !levelCellTaken(x, y)) cand.push([x, y]);
+      });
+      levelShuffle(cand);
+      const dirs = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }];
+      for (let i = 0; i < dif.extraMobs && cand.length; i++) {
+        const [x, y] = cand.pop();
+        const type = dif.extraTypes[Math.floor(Math.random() * dif.extraTypes.length)];
+        const dir = dirs[Math.floor(Math.random() * dirs.length)];
+        state.obstacles.push({ type, x, y, vx: x, vy: y, dir: { x: dir.x, y: dir.y }, charge: 0, isMirroring: false });
+      }
+    }
+
+    // 3) Más pisos pegajosos / resbalosos (la zona inicial y la entrada a la puerta quedan limpias)
+    if (dif.hazardPct > 0) {
+      dist.forEach((d, k) => {
+        const [x, y] = cellOf(k);
+        if (d <= 2 || state.tiles[y][x] !== 'normal') return;
+        if (state.door && Math.abs(x - state.door.x) + Math.abs(y - state.door.y) <= 1) return;
+        if (Math.random() < dif.hazardPct) state.tiles[y][x] = Math.random() < 0.5 ? 'sticky' : 'slippery';
+      });
+    }
+
+    // 4) Menos Vinyls (vidas extra)
+    while (state.collectibles.length > dif.vinyls) {
+      state.collectibles.splice(Math.floor(Math.random() * state.collectibles.length), 1);
+    }
+
+    // 5) Menos ítems en el suelo
+    for (let i = 0; i < dif.removeItems && necroState.floorItems.length; i++) {
+      necroState.floorItems.splice(Math.floor(Math.random() * necroState.floorItems.length), 1);
+    }
+  }
+
+  // Cada club generado recibe la dificultad de su nivel
+  const _lvPrevGenerateArena = generateArena;
+  generateArena = function() {
+    _lvPrevGenerateArena();
+    if (state.mapMode === 'rooms' && state.levelTheme) applyLevelDifficulty(levelState.idx);
+  };
+
+  function beginLevel(idx, reason) {
+    levelState.idx = idx;
+    levelState.timeLeft = LEVEL_SECONDS;
+    const th = LEVEL_THEMES[idx];
+    state.levelTheme = th;
+    config.bpm = th.bpm;
+    state.beatIndex = 0;
+    state.dropTimer = 0;
+    state.isAnchored = false;
+    state.stickyCharge = 0;
+    state.playerMovedThisBeat = false;
+    state.shockwaves = [];
+    generateArena();
+    updateAnchorUI();
+    updateDoorUI();
+    updateHud();
+    renderNecroHud();
+    audio.start();
+    startFallbackClock();
+    updateLevelHud();
+    showLevelBanner(idx, reason);
+  }
+
+  function descend(reason) {
+    if (levelState.busy || state.screen !== 'playing' || state.mapMode !== 'rooms') return;
+    const next = levelState.idx + 1;
+    if (next >= TOTAL_LEVELS) {
+      if (reason === 'stairs') showVictory();
+      else _origTriggerGameOver('Se acabó el tiempo en el último nivel del club.');
+      return;
+    }
+    levelState.busy = true;
+    audio.playSfx(reason === 'stairs' ? 'door_open' : 'push');
+    state.shake = reason === 'stairs' ? 8 : 16;
+    beginLevel(next, reason);
+    levelState.busy = false;
+  }
+
+  function showVictory() {
+    levelState.victory = true;
+    audio.playSfx('door_open');
+    document.getElementById('vicSteps').textContent = state.steps;
+    document.getElementById('vicCombo').textContent = 'x' + state.maxCombo;
+    document.getElementById('vicScore').textContent = state.score;
+    document.getElementById('vicLives').textContent = necroState.lives;
+    showScreen('gameover');
+    gameOverScreen.classList.add('hidden');
+    victoryScreenEl.classList.remove('hidden');
+  }
+
+  // Reloj del nivel (solo corre mientras se juega)
+  let levelLastTick = performance.now();
+  setInterval(() => {
+    const now = performance.now();
+    const dt = Math.min(1, (now - levelLastTick) / 1000);
+    levelLastTick = now;
+    if (state.mapMode !== 'rooms' || state.screen !== 'playing' || levelState.busy) return;
+    levelState.timeLeft -= dt;
+    if (levelState.timeLeft <= 0) {
+      levelState.timeLeft = 0;
+      descend('time');
+      return;
+    }
+    updateLevelHud();
+  }, 200);
+
+  // Pisar la escalera (la puerta ya abierta) baja al siguiente nivel
+  function checkStairs() {
+    if (state.mapMode !== 'rooms' || state.screen !== 'playing') return;
+    const d = state.door;
+    if (d && d.unlocked && state.player.x === d.x && state.player.y === d.y) descend('stairs');
+  }
+  const _lvPrevTryMovePlayer = tryMovePlayer;
+  tryMovePlayer = function(dx, dy) {
+    _lvPrevTryMovePlayer(dx, dy);
+    checkStairs();
+  };
+
+  // Aviso al abrir la puerta: la escalera queda libre
+  const _lvPrevAdvanceDoor = advanceDoorSequenceIfAnchored;
+  advanceDoorSequenceIfAnchored = function() {
+    const r = _lvPrevAdvanceDoor();
+    if (r && state.mapMode === 'rooms' && state.door && state.door.unlocked) {
+      setTimeout(() => {
+        if (state.screen === 'playing') showFeedback('🪜 ¡ESCALERA ABIERTA! ENTRA', '#00f5d4');
+      }, 450);
+    }
+    return r;
+  };
+
+  // Partida nueva del club: arranca en el nivel 1 (110 BPM)
+  const _lvPrevStartGame = startGameWithMode;
+  startGameWithMode = function(mode) {
+    levelState.busy = false;
+    levelState.victory = false;
+    if (mode === 'rooms') {
+      levelState.idx = 0;
+      levelState.timeLeft = LEVEL_SECONDS;
+      state.levelTheme = LEVEL_THEMES[0];
+      config.bpm = LEVEL_THEMES[0].bpm;
+    } else {
+      state.levelTheme = null;
+    }
+    _lvPrevStartGame(mode);
+    if (mode === 'rooms') {
+      updateLevelHud();
+      showLevelBanner(0);
+    }
+  };
+
+  // Pantallas: barra de nivel, aviso de nivel y victoria
+  const _lvPrevShowScreen = showScreen;
+  showScreen = function(name) {
+    _lvPrevShowScreen(name);
+    victoryScreenEl.classList.add('hidden');
+    levelBarEl.classList.toggle('hidden', !(name === 'playing' && state.mapMode === 'rooms'));
+    if (name !== 'playing') levelBannerEl.classList.remove('show');
+    if (name === 'gameover' && state.mapMode === 'rooms' && !levelState.victory) {
+      const r = document.getElementById('gameOverReason');
+      if (!r.textContent.includes('(Nivel ')) r.textContent += ' (Nivel ' + (levelState.idx + 1) + '/' + TOTAL_LEVELS + ')';
+    }
+  };
+
+  document.getElementById('btnVictoryAgain').addEventListener('click', () => startGameWithMode('rooms'));
+  document.getElementById('btnVictoryMenu').addEventListener('click', () => {
+    state.mapMode = 'procedural';
+    generateArena();
+    showScreen('start');
+  });
 
   // Inicializar ítems en suelo para la primera arena generada
   spawnFloorItemsForArena();
