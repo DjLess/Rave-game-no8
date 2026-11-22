@@ -1,0 +1,3467 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>RAVE OF THE CIRCLE</title>
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    background-color: #05040a;
+    color: #f0f0ff;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+  }
+
+  #app {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    background: #070510;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.95);
+  }
+
+  canvas#gameCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    z-index: 1;
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
+  /* HUD Superior */
+  #hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(to bottom, rgba(5, 4, 10, 0.92), rgba(5, 4, 10, 0));
+    pointer-events: none;
+  }
+
+  .hud-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    pointer-events: auto;
+  }
+
+  .stat-pill {
+    background: rgba(18, 14, 34, 0.85);
+    border: 1px solid rgba(0, 245, 212, 0.35);
+    border-radius: 10px;
+    padding: 5px 10px;
+    text-align: center;
+    backdrop-filter: blur(4px);
+  }
+
+  .stat-label {
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #9b8ec4;
+    display: block;
+  }
+
+  .stat-val {
+    font-size: 15px;
+    font-weight: 800;
+    color: #00f5d4;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-val.pink { color: #ff2a85; }
+  .stat-val.gold { color: #fee440; }
+
+  .icon-btn {
+    background: rgba(25, 20, 48, 0.9);
+    border: 1px solid rgba(255, 42, 133, 0.55);
+    color: #fff;
+    border-radius: 10px;
+    padding: 8px 11px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: transform 0.1s, background 0.15s;
+  }
+
+  .icon-btn:active {
+    transform: scale(0.94);
+    background: rgba(255, 42, 133, 0.35);
+  }
+
+  /* Badges superiores de estado */
+  #statusBanners {
+    position: absolute;
+    top: 62px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 18;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    pointer-events: none;
+  }
+
+  .status-badge {
+    background: rgba(254, 228, 64, 0.16);
+    border: 1px solid #fee440;
+    color: #fee440;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 1.4px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    box-shadow: 0 0 12px rgba(254, 228, 64, 0.35);
+    white-space: nowrap;
+  }
+
+  .status-badge.cyan {
+    background: rgba(0, 245, 212, 0.16);
+    border-color: #00f5d4;
+    color: #00f5d4;
+    box-shadow: 0 0 12px rgba(0, 245, 212, 0.35);
+  }
+
+  /* Feedback flotante */
+  #beatFeedback {
+    position: absolute;
+    bottom: 92px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 25;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    text-shadow: 0 0 12px currentColor;
+    white-space: nowrap;
+  }
+
+  /* Barra de ritmo inferior (estilo NecroDancer) */
+  #beatBarContainer {
+    position: absolute;
+    bottom: 16px;
+    left: 14px;
+    right: 14px;
+    height: 62px;
+    z-index: 25;
+    background: rgba(10, 7, 22, 0.94);
+    border: 1.5px solid rgba(0, 245, 212, 0.45);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    pointer-events: none;
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.85), inset 0 0 14px rgba(155, 93, 229, 0.25);
+  }
+
+  #beatBarCanvas {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Controles táctiles D-Pad con botón central de Clavarse */
+  #dpad {
+    position: absolute;
+    bottom: 92px;
+    right: 14px;
+    z-index: 24;
+    display: grid;
+    grid-template-columns: repeat(3, 46px);
+    grid-template-rows: repeat(3, 46px);
+    gap: 5px;
+    opacity: 0.88;
+  }
+
+  .pad-btn {
+    background: rgba(24, 19, 46, 0.9);
+    border: 1px solid rgba(0, 245, 212, 0.5);
+    border-radius: 12px;
+    color: #00f5d4;
+    font-size: 16px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: transform 0.08s, background 0.12s, border-color 0.12s;
+  }
+
+  .pad-btn:active {
+    background: rgba(0, 245, 212, 0.35);
+    transform: scale(0.92);
+  }
+
+  .pad-btn.anchor-btn {
+    border-color: rgba(254, 228, 64, 0.65);
+    color: #fee440;
+    font-size: 14px;
+  }
+
+  .pad-btn.anchor-btn.active {
+    background: rgba(254, 228, 64, 0.3);
+    border-color: #fee440;
+    box-shadow: 0 0 12px rgba(254, 228, 64, 0.6);
+  }
+
+  /* Pantallas Overlay */
+  .overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    background: rgba(6, 5, 14, 0.94);
+    backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 22px;
+    text-align: center;
+    pointer-events: auto;
+    overflow-y: auto;
+  }
+
+  #settingsModal {
+    z-index: 60;
+    justify-content: flex-start;
+    touch-action: pan-y;
+    padding-top: 20px;
+    padding-bottom: 28px;
+  }
+
+  .title-badge {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #ff2a85;
+    border: 1px solid rgba(255, 42, 133, 0.5);
+    padding: 4px 12px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-size: 30px;
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #00f5d4, #9b5de5, #ff2a85);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    font-size: 12.5px;
+    color: #b4abd4;
+    line-height: 1.45;
+    max-width: 340px;
+    margin-bottom: 14px;
+  }
+
+  .legend-box {
+    width: 100%;
+    max-width: 350px;
+    background: rgba(18, 14, 34, 0.9);
+    border: 1px solid rgba(155, 93, 229, 0.3);
+    border-radius: 14px;
+    padding: 10px 13px;
+    margin-bottom: 14px;
+    text-align: left;
+    font-size: 11.5px;
+    color: #d6cff0;
+  }
+
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 6px;
+  }
+  .legend-row:last-child { margin-bottom: 0; }
+
+  .dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .btn-primary {
+    width: 100%;
+    max-width: 300px;
+    padding: 13px 18px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #00f5d4, #00bbf9);
+    color: #05040a;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 0.9px;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-bottom: 9px;
+    box-shadow: 0 0 22px rgba(0, 245, 212, 0.4);
+  }
+
+  .btn-primary:active { transform: scale(0.97); }
+
+  .btn-arena-custom {
+    width: 100%;
+    max-width: 300px;
+    padding: 13px 18px;
+    border: 1.5px solid #fee440;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(254, 228, 64, 0.2), rgba(255, 42, 133, 0.2));
+    color: #fee440;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-bottom: 9px;
+    box-shadow: 0 0 16px rgba(254, 228, 64, 0.22);
+  }
+
+  .btn-arena-custom:active { transform: scale(0.97); }
+
+  .btn-secondary {
+    width: 100%;
+    max-width: 300px;
+    padding: 11px 18px;
+    border: 1px solid rgba(255, 42, 133, 0.65);
+    border-radius: 12px;
+    background: rgba(255, 42, 133, 0.14);
+    color: #ff6ba9;
+    font-size: 12.5px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-bottom: 8px;
+  }
+
+  .btn-secondary:active { transform: scale(0.97); }
+
+  /* Panel de Parámetros */
+  .settings-card {
+    width: 100%;
+    max-width: 380px;
+    background: rgba(18, 14, 34, 0.95);
+    border: 1px solid rgba(0, 245, 212, 0.3);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 12px;
+    text-align: left;
+    touch-action: pan-y;
+  }
+
+  .setting-item {
+    margin-bottom: 13px;
+    touch-action: pan-y;
+  }
+  .setting-item:last-child { margin-bottom: 0; }
+
+  .setting-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 700;
+    color: #e4defa;
+    margin-bottom: 5px;
+  }
+
+  .setting-val {
+    color: #00f5d4;
+    font-variant-numeric: tabular-nums;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: #ff2a85;
+    cursor: pointer;
+    touch-action: pan-x;
+    height: 22px;
+  }
+
+  .check-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .check-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: #d6cff0;
+    background: rgba(10, 8, 22, 0.8);
+    padding: 7px 9px;
+    border-radius: 8px;
+    border: 1px solid rgba(155, 93, 229, 0.25);
+    cursor: pointer;
+  }
+
+  .check-label input {
+    accent-color: #00f5d4;
+    width: 15px;
+    height: 15px;
+  }
+
+  /* === NUEVOS ESTILOS: HUD NECRODANCER (CORAZONES + 3 SLOTS + BOTONES MÓVILES) === */
+  #statusBanners {
+    top: 128px;
+  }
+  #necroHudRow {
+    position: absolute;
+    top: 56px;
+    left: 14px;
+    right: 14px;
+    z-index: 21;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    pointer-events: none;
+  }
+
+  #itemSlotsPanel {
+    display: flex;
+    gap: 6px;
+    pointer-events: auto;
+  }
+
+  .necro-slot {
+    width: 62px;
+    min-height: 64px;
+    background: rgba(14, 10, 30, 0.92);
+    border: 1.5px solid rgba(155, 93, 229, 0.5);
+    border-radius: 10px;
+    padding: 4px 4px 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7), inset 0 0 8px rgba(155, 93, 229, 0.2);
+    transition: border-color 0.15s, transform 0.12s, box-shadow 0.15s;
+  }
+
+  .necro-slot.has-item {
+    border-color: #00f5d4;
+    box-shadow: 0 0 12px rgba(0, 245, 212, 0.35), inset 0 0 10px rgba(0, 245, 212, 0.15);
+  }
+
+  .necro-slot.slot-shades.has-item {
+    border-color: #38bdf8;
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.45);
+  }
+
+  .necro-slot.slot-consumable.has-item {
+    border-color: #fb923c;
+    box-shadow: 0 0 12px rgba(251, 146, 60, 0.45);
+  }
+
+  .necro-slot.slot-special.has-item {
+    border-color: #fee440;
+    box-shadow: 0 0 12px rgba(254, 228, 64, 0.45);
+  }
+
+  .necro-slot-title {
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    color: #9b8ec4;
+    line-height: 1;
+  }
+
+  .necro-slot-icon {
+    font-size: 20px;
+    line-height: 1.1;
+    margin: 2px 0;
+  }
+
+  .necro-slot-sub {
+    font-size: 8.5px;
+    font-weight: 800;
+    color: #e4defa;
+    line-height: 1.05;
+    text-align: center;
+  }
+
+  #heartsPanel {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 4px;
+    max-width: 175px;
+    background: rgba(14, 10, 30, 0.88);
+    border: 1.5px solid rgba(255, 42, 133, 0.45);
+    border-radius: 10px;
+    padding: 6px 8px;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65);
+  }
+
+  .heart-unit {
+    font-size: 16px;
+    line-height: 1;
+    filter: drop-shadow(0 0 5px rgba(255, 42, 133, 0.7));
+    transition: transform 0.15s;
+  }
+
+  .heart-unit.empty {
+    opacity: 0.25;
+    filter: grayscale(1);
+  }
+
+  .shield-unit {
+    font-size: 15px;
+    line-height: 1;
+    filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.9));
+  }
+
+  /* Botones táctiles de ítems al lado del PAD */
+  #mobileItemActions {
+    position: absolute;
+    bottom: 92px;
+    left: 14px;
+    z-index: 24;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: auto;
+  }
+
+  .mobile-item-btn {
+    background: rgba(20, 15, 42, 0.94);
+    border: 1.5px solid #00f5d4;
+    border-radius: 12px;
+    color: #fff;
+    padding: 8px 11px;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    box-shadow: 0 0 14px rgba(0, 245, 212, 0.35);
+    transition: transform 0.08s;
+  }
+
+  .mobile-item-btn:active {
+    transform: scale(0.93);
+  }
+
+  .mobile-item-btn.btn-cig {
+    border-color: #fb923c;
+    color: #fdba74;
+    box-shadow: 0 0 14px rgba(251, 146, 60, 0.4);
+  }
+
+  .mobile-item-btn.btn-drop {
+    border-color: #fee440;
+    color: #fee440;
+    box-shadow: 0 0 14px rgba(254, 228, 64, 0.45);
+  }
+
+  .status-badge.orange {
+    background: rgba(251, 146, 60, 0.18);
+    border-color: #fb923c;
+    color: #fdba74;
+    box-shadow: 0 0 12px rgba(251, 146, 60, 0.4);
+  }
+
+  .status-badge.purple {
+    background: rgba(168, 85, 247, 0.2);
+    border-color: #c084fc;
+    color: #e9d5ff;
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.45);
+  }
+
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-group">
+      <div class="stat-pill">
+        <span class="stat-label">Pasos</span>
+        <span id="stepsVal" class="stat-val">0</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-label">Combo</span>
+        <span id="comboVal" class="stat-val pink">x1</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-label">Vinyls</span>
+        <span id="scoreVal" class="stat-val gold">0</span>
+      </div>
+    </div>
+    <div class="hud-group">
+      <button id="btnTogglePad" class="icon-btn" type="button" title="Mostrar/Ocultar Cruceta">PAD</button>
+      <button id="btnOpenSettingsHud" class="icon-btn" type="button">⚙</button>
+    </div>
+  </div>
+
+
+  <!-- HUD Estilo Crypt of the NecroDancer (3 Slots + Corazones) -->
+  <div id="necroHudRow" class="hidden">
+    <div id="itemSlotsPanel">
+      <div id="slotShades" class="necro-slot slot-shades" title="Shades: Escudo pasivo">
+        <span class="necro-slot-title">Shades</span>
+        <span id="slotShadesIcon" class="necro-slot-icon">·</span>
+        <span id="slotShadesSub" class="necro-slot-sub">Vacío</span>
+      </div>
+      <div id="slotConsumable" class="necro-slot slot-consumable" title="Consumable (Combo PC: W+S o ▲+▼)">
+        <span class="necro-slot-title">Consumable</span>
+        <span id="slotConsumableIcon" class="necro-slot-icon">·</span>
+        <span id="slotConsumableSub" class="necro-slot-sub">W+S</span>
+      </div>
+      <div id="slotSpecial" class="necro-slot slot-special" title="Special (Combo PC: A+D o ◀+▶)">
+        <span class="necro-slot-title">Special</span>
+        <span id="slotSpecialIcon" class="necro-slot-icon">·</span>
+        <span id="slotSpecialSub" class="necro-slot-sub">A+D</span>
+      </div>
+    </div>
+    <div id="heartsPanel" aria-label="Vidas y Escudo"></div>
+  </div>
+
+  <!-- Banners de estado -->
+  <div id="statusBanners">
+    <div id="anchorBadge" class="status-badge hidden">⚓ CLAVADO EN EL SUELO</div>
+    <div id="doorBadge" class="status-badge cyan hidden">🚪 PUERTA: 0/5 PASOS CLAVADO</div>
+    <div id="doubleStepBadge" class="status-badge orange hidden">🚬 PASO DOBLE: 5 TURNOS</div>
+    <div id="freezeNpcBadge" class="status-badge purple hidden">🎛 DROP FREEZE: 4 TURNOS</div>
+  </div>
+
+  <!-- Feedback flotante -->
+  <div id="beatFeedback">ON BEAT!</div>
+
+
+  <!-- Botones táctiles de ítems junto al PAD -->
+  <div id="mobileItemActions" class="hidden">
+    <button id="btnUseConsumableMobile" class="mobile-item-btn btn-cig hidden" type="button">🚬 USAR CIGARROS</button>
+    <button id="btnUseSpecialMobile" class="mobile-item-btn btn-drop hidden" type="button">🎛 ACTIVAR DROP</button>
+  </div>
+
+  <!-- Cruceta táctil con botón central de Clavarse -->
+  <div id="dpad">
+    <div></div>
+    <button class="pad-btn" type="button" data-dir="0,-1">▲</button>
+    <div></div>
+    <button class="pad-btn" type="button" data-dir="-1,0">◀</button>
+    <button id="btnAnchorPad" class="pad-btn anchor-btn" type="button" title="Clavarse / Desclavarse (1 pulso)">⚓</button>
+    <button class="pad-btn" type="button" data-dir="1,0">▶</button>
+    <div></div>
+    <button class="pad-btn" type="button" data-dir="0,1">▼</button>
+    <div></div>
+  </div>
+
+  <!-- Barra de Beats convergentes -->
+  <div id="beatBarContainer" class="hidden">
+    <canvas id="beatBarCanvas"></canvas>
+  </div>
+
+  <!-- Pantalla de Inicio -->
+  <div id="startScreen" class="overlay">
+    <div class="title-badge">Techno Dungeon Prototype</div>
+    <h1>RAVE OF THE CIRCLE</h1>
+    <p class="subtitle">Baila al ritmo del bombo, usa los pisos pegajosos y resbaladizos, guía al Raver Perdido, esquiva al NPC Espejo y abre la puerta clavándote.</p>
+
+    <div class="legend-box">
+      <div class="legend-row"><span class="dot" style="background:#a855f7;box-shadow:0 0 8px #a855f7"></span><span><b>Piso Pegajoso:</b> Te frena (1 pulso para salir, no puedes deslizarte).</span></div>
+      <div class="legend-row"><span class="dot" style="background:#38bdf8;box-shadow:0 0 8px #38bdf8"></span><span><b>Piso Resbaloso:</b> Te desliza +1 casilla extra en tu dirección.</span></div>
+      <div class="legend-row"><span class="dot" style="background:#2dd4bf;box-shadow:0 0 8px #2dd4bf"></span><span><b>Raver Perdido:</b> Con combo ≥ x3 cerca te sigue; llévalo a su grupo por +1 Vinyl.</span></div>
+      <div class="legend-row"><span class="dot" style="background:#f59e0b;box-shadow:0 0 8px #f59e0b"></span><span><b>Puerta Sellada:</b> Clávate (⚓) frente a ella y haz 5 pasos al ritmo.</span></div>
+      <div class="legend-row"><span class="dot" style="background:#e0f2fe;box-shadow:0 0 8px #38bdf8"></span><span><b>NPC Espejo:</b> A menos de 8 casillas imita tus pasos de forma inversa.</span></div>
+    </div>
+
+    <button id="btnStartProcedural" class="btn-primary" type="button">▶ Pista Aleatoria</button>
+    <button id="btnStartMainStage" class="btn-arena-custom" type="button">🎛 Main Stage (Mapa Custom)</button>
+    <button id="btnStartClub" class="btn-arena-custom" type="button">🏛 Club Procedural (Salas)</button>
+    <button id="btnOpenSettingsStart" class="btn-secondary" type="button">⚙ Configurar Parámetros</button>
+  </div>
+
+  <!-- Pantalla Game Over -->
+  <div id="gameOverScreen" class="overlay hidden">
+    <div class="title-badge">Perdiste el Ritmo</div>
+    <h1>FIN DEL SET</h1>
+    <p id="gameOverReason" class="subtitle">Chocaste con un raver en la pista.</p>
+    <div class="legend-box" style="text-align:center">
+      <div style="font-size:14px;margin-bottom:6px">Pasos totales: <b id="finalSteps" style="color:#00f5d4">0</b></div>
+      <div style="font-size:14px;margin-bottom:6px">Combo máximo: <b id="finalCombo" style="color:#ff2a85">x1</b></div>
+      <div style="font-size:14px">Vinyls recogidos: <b id="finalScore" style="color:#fee440">0</b></div>
+    </div>
+    <button id="btnRestart" class="btn-primary" type="button">↻ Volver a Bailar</button>
+    <button id="btnBackToMenuOver" class="btn-arena-custom" type="button">🏠 Menú Principal</button>
+    <button id="btnOpenSettingsOver" class="btn-secondary" type="button">⚙ Ajustar Parámetros</button>
+  </div>
+
+  <!-- Modal de Parámetros -->
+  <div id="settingsModal" class="overlay hidden">
+    <div class="title-badge">Control de Pista</div>
+    <h1 style="font-size:24px;margin-bottom:14px">PARÁMETROS DEL JUEGO</h1>
+
+    <div class="settings-card">
+      <div class="setting-item">
+        <div class="setting-header"><span>Velocidad Techno (BPM)</span><span id="valBpm" class="setting-val">128 BPM</span></div>
+        <input id="inpBpm" type="range" min="80" max="175" value="128">
+      </div>
+      <div class="setting-item">
+        <div class="setting-header"><span>Tolerancia de Ritmo</span><span id="valTolerance" class="setting-val">94%</span></div>
+        <input id="inpTolerance" type="range" min="30" max="100" step="2" value="94">
+      </div>
+      <div class="setting-item">
+        <div class="setting-header"><span>Tamaño de Celdas (Zoom)</span><span id="valTileSize" class="setting-val">54 px</span></div>
+        <input id="inpTileSize" type="range" min="36" max="76" value="54">
+      </div>
+      <div class="setting-item">
+        <div class="setting-header"><span>Tamaño de la Pista (Grid)</span><span id="valGridSize" class="setting-val">19 x 19</span></div>
+        <input id="inpGridSize" type="range" min="13" max="27" step="2" value="19">
+      </div>
+      <div class="setting-item">
+        <div class="setting-header"><span>Cantidad de Obstáculos</span><span id="valObsCount" class="setting-val">14</span></div>
+        <input id="inpObsCount" type="range" min="2" max="32" value="14">
+      </div>
+      <div class="setting-item">
+        <div class="setting-header"><span>Distancia Mínima entre Obstáculos</span><span id="valMinDist" class="setting-val">2 celdas</span></div>
+        <input id="inpMinDist" type="range" min="1" max="5" value="2">
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <div class="setting-header"><span>Tipos de Obstáculos Activos</span></div>
+      <div class="check-grid">
+        <label class="check-label"><input id="chkSubwoofer" type="checkbox" checked> Subwoofers</label>
+        <label class="check-label"><input id="chkDancer" type="checkbox" checked> Raver Bailarín</label>
+        <label class="check-label"><input id="chkBouncer" type="checkbox" checked> Bouncer Patrulla</label>
+        <label class="check-label"><input id="chkDasher" type="button" style="display:none" checked><input id="chkDasherBox" type="checkbox" checked style="display:inline;width:15px;height:15px"> Raver Saltarín</label>
+        <label class="check-label"><input id="chkPillar" type="checkbox" checked> Columna Club</label>
+        <label class="check-label"><input id="chkMirror" type="checkbox" checked> NPC Espejo</label>
+      </div>
+    </div>
+
+    <button id="btnApplySettings" class="btn-primary" type="button">✓ Aplicar y Regenerar Pista</button>
+    <button id="btnResetDefaults" class="btn-secondary" type="button">↺ Restaurar Valores por Defecto</button>
+    <button id="btnCloseSettings" class="btn-secondary" style="border-color:#666;color:#ccc;background:transparent" type="button">Cerrar</button>
+  </div>
+</div>
+
+<script src="assets/manifest.js"></script>
+<script>
+(function() {
+  const MAIN_STAGE_MAP_STRING = "RAVE_MAP_V1|19|.................../.................../.................../.................../.................../.................../.................../.................../.................../.................../.................../.................../.................../.................../.................../.................../.................../.................../...................|P@9,9;D@4,1;G@16,17;L@1,17;K@9,0;R@8,0:1,0;R@8,1:1,0;R@9,1:1,0;R@10,1:1,0;R@10,0:1,0;C@8,4;C@7,4;C@9,6;C@10,4;C@9,4;C@8,6;C@6,5;C@11,4;C@10,6;C@11,6;C@10,7;C@9,7;C@7,6;C@5,6;C@5,7;C@7,8;C@8,7;C@7,7;C@6,7;C@6,6;C@5,5;C@5,3;C@6,3;C@7,3;C@8,3;C@9,3;C@10,3;C@11,3;C@12,3;C@12,4;C@12,6;C@11,7;C@12,7;C@13,7;C@13,6;C@13,5;C@12,5;C@11,5;C@10,5;C@9,5;C@8,5;C@7,5;C@6,4;C@5,4;C@4,4;C@4,5;M@16,16;M@17,16;M@18,16;M@18,17;V@6,1;W@18,0;W@0,0;W@0,4;W@18,4;W@0,8;W@18,8;W@0,12;W@0,16;W@18,12;W@13,0;W@14,0;W@15,0;W@7,0;W@11,0;B@1,14:1,0;B@15,18:1,0;E@3,11;E@12,17;J@14,9:1,0;J@6,17:1,0;J@7,11:1,0;J@3,9:1,0;A@11,11:1,0;A@9,16:1,0;A@17,5:1,0;A@16,14:1,0;#@4,2;#@4,3;#@4,0;#@13,1;#@13,2;#@13,3";
+
+  const DEFAULT_CONFIG = {
+    bpm: 128,
+    beatTolerance: 94,
+    tileSize: 54,
+    gridSize: 19,
+    obstacleCount: 14,
+    minDistance: 2,
+    types: {
+      subwoofer: true,
+      dancer: true,
+      bouncer: true,
+      dasher: true,
+      pillar: true,
+      mirror: true
+    }
+  };
+
+  let config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+
+  const state = {
+    screen: 'start',
+    mapMode: 'procedural', // 'procedural' | 'main_stage'
+    steps: 0,
+    combo: 1,
+    maxCombo: 1,
+    score: 0,
+    beatIndex: 0,
+    lastBeatTime: 0,
+    playerMovedThisBeat: false,
+    isAnchored: false,
+    stickyCharge: 0,
+    anchorSquash: 0,
+    player: { x: 9, y: 9, vx: 9, vy: 9, nudgeX: 0, nudgeY: 0, pulse: 0 },
+    tiles: [],
+    obstacles: [],
+    lostRavers: [],
+    groupTargets: [],
+    door: null,
+    collectibles: [],
+    shockwaves: [],
+    shake: 0,
+    dropTimer: 0,
+    showDpad: true,
+    beatFlash: 0
+  };
+
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const beatCanvas = document.getElementById('beatBarCanvas');
+  const bCtx = beatCanvas.getContext('2d');
+
+  const startScreen = document.getElementById('startScreen');
+  const gameOverScreen = document.getElementById('gameOverScreen');
+  const settingsModal = document.getElementById('settingsModal');
+  const hud = document.getElementById('hud');
+  const beatBarContainer = document.getElementById('beatBarContainer');
+  const dpad = document.getElementById('dpad');
+  const beatFeedback = document.getElementById('beatFeedback');
+  const anchorBadge = document.getElementById('anchorBadge');
+  const doorBadge = document.getElementById('doorBadge');
+  const btnAnchorPad = document.getElementById('btnAnchorPad');
+
+  // Motor de Audio Techno (Web Audio API)
+  const audio = {
+    ctx: null,
+    step16: 0,
+    nextNoteTime: 0,
+    timerId: null,
+    bassNotes: [55, 55, 65.41, 55, 73.42, 55, 82.41, 65.41],
+
+    init() {
+      try {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      } catch (e) {}
+    },
+
+    start() {
+      this.init();
+      this.stop();
+      this.step16 = 0;
+      const now = this.ctx ? this.ctx.currentTime : performance.now() / 1000;
+      this.nextNoteTime = now + 0.05;
+      state.lastBeatTime = performance.now();
+      this.timerId = setInterval(() => this.scheduler(), 20);
+    },
+
+    stop() {
+      if (this.timerId) {
+        clearInterval(this.timerId);
+        this.timerId = null;
+      }
+    },
+
+    scheduler() {
+      if (state.screen !== 'playing') return;
+      const sixteenthSec = (60 / config.bpm) / 4;
+      if (this.ctx) {
+        while (this.nextNoteTime < this.ctx.currentTime + 0.1) {
+          this.triggerStep(this.step16, this.nextNoteTime);
+          this.nextNoteTime += sixteenthSec;
+          this.step16 = (this.step16 + 1) % 16;
+        }
+      }
+    },
+
+    triggerStep(step, time) {
+      if (!this.ctx) return;
+      if (step % 4 === 0) {
+        this.playKick(time);
+        const delayMs = Math.max(0, (time - this.ctx.currentTime) * 1000);
+        setTimeout(() => {
+          if (state.screen === 'playing') onBeatTick();
+        }, delayMs);
+      }
+      if (step % 4 === 2) this.playHat(time, 0.09);
+      else if (step % 2 === 1) this.playHat(time, 0.03);
+      if (step === 4 || step === 12) this.playClap(time);
+      const note = this.bassNotes[step % this.bassNotes.length];
+      this.playBass(time, note, step);
+    },
+
+    playKick(time) {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(145, time);
+      osc.frequency.exponentialRampToValueAtTime(38, time + 0.14);
+      gain.gain.setValueAtTime(0.85, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.28);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(time);
+      osc.stop(time + 0.29);
+    },
+
+    playHat(time, vol) {
+      const bufferSize = this.ctx.sampleRate * 0.06;
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buffer;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.value = 7500;
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(vol, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.055);
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.ctx.destination);
+      noise.start(time);
+    },
+
+    playClap(time) {
+      const bufferSize = this.ctx.sampleRate * 0.12;
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buffer;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 1400;
+      filter.Q.value = 1.2;
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.28, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.11);
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.ctx.destination);
+      noise.start(time);
+    },
+
+    playBass(time, freq, step) {
+      const osc = this.ctx.createOscillator();
+      const filter = this.ctx.createBiquadFilter();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, time);
+      const cutoff = 260 + Math.sin((state.beatIndex + step * 0.25) * 0.5) * 180 + (state.dropTimer > 0 ? 450 : 0);
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(Math.max(120, cutoff), time);
+      filter.Q.value = 6.5;
+      gain.gain.setValueAtTime(0.2, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(time);
+      osc.stop(time + 0.13);
+    },
+
+    playSfx(type) {
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      if (type === 'step') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(520, now + 0.06);
+        gain.gain.setValueAtTime(0.14, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+      } else if (type === 'anchor_step') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(240, now);
+        osc.frequency.exponentialRampToValueAtTime(310, now + 0.06);
+        gain.gain.setValueAtTime(0.14, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+      } else if (type === 'slip') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(620, now);
+        osc.frequency.exponentialRampToValueAtTime(940, now + 0.09);
+        gain.gain.setValueAtTime(0.16, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      } else if (type === 'sticky') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(95, now + 0.11);
+        gain.gain.setValueAtTime(0.16, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      } else if (type === 'anchor_on' || type === 'anchor_off') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(type === 'anchor_on' ? 440 : 220, now);
+        osc.frequency.exponentialRampToValueAtTime(type === 'anchor_on' ? 220 : 440, now + 0.09);
+        gain.gain.setValueAtTime(0.16, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      } else if (type === 'door_tick') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(520 + (state.door ? state.door.progress * 70 : 0), now);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      } else if (type === 'door_open') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.setValueAtTime(660, now + 0.07);
+        osc.frequency.setValueAtTime(880, now + 0.14);
+        gain.gain.setValueAtTime(0.24, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      } else if (type === 'miss') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(110, now);
+        osc.frequency.linearRampToValueAtTime(65, now + 0.15);
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      } else if (type === 'pickup') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, now);
+        osc.frequency.setValueAtTime(880, now + 0.06);
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+      } else if (type === 'push') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(190, now);
+        osc.frequency.exponentialRampToValueAtTime(55, now + 0.22);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.23);
+      }
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    }
+  };
+
+  let fallbackTimer = null;
+  function startFallbackClock() {
+    stopFallbackClock();
+    fallbackTimer = setInterval(() => {
+      if (state.screen === 'playing' && (!audio.ctx || audio.ctx.state !== 'running')) {
+        onBeatTick();
+      }
+    }, (60 / config.bpm) * 1000);
+  }
+  function stopFallbackClock() {
+    if (fallbackTimer) {
+      clearInterval(fallbackTimer);
+      fallbackTimer = null;
+    }
+  }
+
+  function loadMapFromString(rawStr) {
+    const parts = rawStr.trim().split('|');
+    const size = parseInt(parts[1], 10);
+    if (!state.baseGrid) state.baseGrid = config.gridSize;
+    config.gridSize = size;
+
+    const rows = parts[2].split('/');
+    state.tiles = Array.from({ length: size }, (_, y) => {
+      const r = rows[y] || '';
+      return Array.from({ length: size }, (_, x) => {
+        const ch = r[x] || '.';
+        if (ch === 'X') return 'wall';
+        if (ch === 'S') return 'sticky';
+        if (ch === 'I') return 'slippery';
+        return 'normal';
+      });
+    });
+
+    state.obstacles = [];
+    state.collectibles = [];
+    state.shockwaves = [];
+    state.lostRavers = [];
+    state.groupTargets = [];
+    state.door = null;
+
+    state.mapItems = [];
+    const groupColor = '#2dd4bf';
+    let playerPos = { x: Math.floor(size / 2), y: Math.floor(size / 2) };
+
+    const tokens = parts[3] ? parts[3].split(';').filter(Boolean) : [];
+    for (const tok of tokens) {
+      const [code, rest] = tok.split('@');
+      if (!rest) continue;
+      const [coordPart, dirPart] = rest.split(':');
+      const [x, y] = coordPart.split(',').map(Number);
+      if (isNaN(x) || isNaN(y) || x < 0 || y < 0 || x >= size || y >= size) continue;
+
+      let dir = { x: 1, y: 0 };
+      if (dirPart) {
+        const [dx, dy] = dirPart.split(',').map(Number);
+        if (!isNaN(dx) && !isNaN(dy)) dir = { x: dx, y: dy };
+      }
+
+      if (code === 'Q') {
+        state.obstacles.push({ type: 'bar', x, y, vx: x, vy: y, dir, charge: 0, isMirroring: false });
+      } else if (code === 'H' || code === 'T' || code === 'O') {
+        state.mapItems.push({ x, y, type: code === 'H' ? 'shades' : code === 'T' ? 'cigarettes' : 'drop_item' });
+      } else if (code === 'P') {
+        playerPos = { x, y };
+      } else if (code === 'D') {
+        state.door = { x, y, unlocked: false, progress: 0 };
+      } else if (code === 'G') {
+        state.groupTargets.push({ x, y, color: groupColor, completed: false });
+      } else if (code === 'L') {
+        state.lostRavers.push({
+          homeX: x,
+          homeY: y,
+          x,
+          y,
+          vx: x,
+          vy: y,
+          color: groupColor,
+          following: false,
+          reunited: false
+        });
+      } else if (code === 'V') {
+        state.collectibles.push({ x, y, phase: Math.random() * Math.PI * 2 });
+      } else if (code === 'M') {
+        state.obstacles.push({
+          type: 'group_mate',
+          color: groupColor,
+          x,
+          y,
+          vx: x,
+          vy: y,
+          dir: { x: 0, y: 0 },
+          charge: 0,
+          isMirroring: false
+        });
+      } else if (code === 'W') {
+        state.obstacles.push({ type: 'subwoofer', x, y, vx: x, vy: y, dir, charge: 0, isMirroring: false });
+      } else if (code === 'A') {
+        state.obstacles.push({ type: 'dancer', x, y, vx: x, vy: y, dir, charge: 0, isMirroring: false });
+      } else if (code === 'B') {
+        state.obstacles.push({ type: 'bouncer', x, y, vx: x, vy: y, dir, charge: 0, isMirroring: false });
+      } else if (code === 'J') {
+        state.obstacles.push({ type: 'dasher', x, y, vx: x, vy: y, dir, charge: 0, isMirroring: false });
+      } else if (code === '#') {
+        state.obstacles.push({ type: 'pillar', x, y, vx: x, vy: y, dir, charge: 0, isMirroring: false });
+      } else if (code === 'E') {
+        const dist = Math.abs(x - playerPos.x) + Math.abs(y - playerPos.y);
+        state.obstacles.push({ type: 'mirror', x, y, vx: x, vy: y, dir, charge: 0, isMirroring: dist < 8 });
+      } else if (code === 'C') {
+        state.obstacles.push({ type: 'crowd', x, y, vx: x, vy: y, dir, charge: 0, isMirroring: false });
+      } else if (code === 'K') {
+        state.obstacles.push({ type: 'dj', x, y, vx: x, vy: y, dir, charge: 0, isMirroring: false });
+      } else if (code === 'R') {
+        state.obstacles.push({ type: 'dj_bot', x, y, vx: x, vy: y, dir, charge: 0, isMirroring: false });
+      }
+    }
+
+    state.player = {
+      x: playerPos.x,
+      y: playerPos.y,
+      vx: playerPos.x,
+      vy: playerPos.y,
+      nudgeX: 0,
+      nudgeY: 0,
+      pulse: 0
+    };
+
+    if (state.collectibles.length === 0) {
+      for (let i = 0; i < 3; i++) spawnVinyl();
+    }
+  }
+
+    // =========================================================================
+  // GENERADOR PROCEDURAL DE CLUB (pista central + habitaciones interconectadas)
+  // Plantillas ASCII: . piso, S pegajoso, I resbaloso, X pared, + puerta;
+  // letras = objetos (minúscula = dirección vertical inicial)
+  // =========================================================================
+  const ClubGen = (() => {
+    const lib = []; // se llena tras definir necro()
+    const OB={W:'🔊',A:'💃',B:'🕴',J:'🦘','#':'🏛',E:'🪞',C:'👥',V:'💿',H:'🕶',T:'🚬',O:'🎛',L:'🕺',G:'🎯',M:'👯',K:'🎧',R:'🤖',Q:'🍸'},DIRO='ABJR';
+    const cl=r=>JSON.parse(JSON.stringify(r));
+    function rot(r){const w=r.h,h=r.w,g=[],o={};
+     for(let y=0;y<h;y++){g.push([]);for(let x=0;x<w;x++)g[y].push(r.g[r.h-1-x][y])}
+     for(const k in r.o){const[X,Y]=k.split(',').map(Number),[c,dx,dy]=r.o[k];o[(r.h-1-Y)+','+X]=[c,-dy,dx]}
+     return{n:r.n,w,h,g,o}}
+    function mir(r){const g=r.g.map(a=>[...a].reverse()),o={};
+     for(const k in r.o){const[X,Y]=k.split(',').map(Number),[c,dx,dy]=r.o[k];o[(r.w-1-X)+','+Y]=[c,-dx,dy]}
+     return{n:r.n,w:r.w,h:r.h,g,o}}
+    function tf(r,k,m){r=cl(r);if(m)r=mir(r);while(k--)r=rot(r);return r}
+    function pr(n,rows){const g=[],o={};rows.forEach((s,y)=>{g.push([]);[...s].forEach((ch,x)=>{if('.SIX+'.includes(ch)){g[y].push(ch);return}
+     const u=ch.toUpperCase();g[y].push('.');if(OB[u])o[x+','+y]=[u,...(ch!=u?[0,1]:[1,0])]})});return{n,w:rows[0].length,h:rows.length,g,o}}
+    function necro(){return[
+     pr('Tienda del DJ',['XXXX+XXXX','X.......X','X.H.T.O.X','X.......X','+...K...+','X.......X','XXXX+XXXX']),
+     pr('Bóveda de vinilos',['XXX+XXX','X.SWS.X','XSVVVSX','X.VVV.X','XSVVVSX','X.S.S.X','XXXXXXX']),
+     pr('Arena del DJ',['XXXXXX+XXXXXX','X.W.......W.X','X...........X','X..r..K..r..X','X...........X','+...R...R...+','X...........X','X.W.......W.X','X...........X','X...........X','XXXXXX+XXXXXX']),
+     pr('Pasillo de pilares',['XXXXX+XXXXX','X.#.#.#.#.X','X.........X','+.#.#.#.#.+','X....a....X','X.#.#.#.#.X','XXXXX+XXXXX']),
+     pr('Pista de hielo',['XXXXX+XXXXX','XIIIIIIIIIX','XIIIIEIIIIX','+IIIIIIIII+','XIIIIIIIIIX','XIIIIVIIIIX','XXXXX+XXXXX']),
+     pr('Pantano pegajoso',['XXXX+XXXX','XSSS.SSSX','XSJSSSJSX','X.SSSSS.X','+SSSVSSS+','X.SSSSS.X','XSJSSSJSX','XSSS.SSSX','XXXX+XXXX']),
+     pr('Reunión de ravers',['XXXXX+XXXXX','XL.#...#.GX','X........MX','+...CCC...+','X.........X','X..A...a..X','XXXXX+XXXXX']),
+     pr('Guardia con Drop',['XXXX+XXXX','X.......X','X.b...b.X','X.......X','+...O...+','X.......X','X.b...b.X','X.......X','XXXX+XXXX']),
+     pr('Anillo de bajos',['XXXX+XXXX','X.......X','X..WWW..X','+..WHW..+','X..W.W..X','X.......X','XXXX+XXXX']),
+     pr('Fumadores',['XXXX+XXXX','XCC...CCX','XC.....CX','+..T.E..+','XC.....CX','XCC...CCX','XXXX+XXXX'])]}
+    const CEN=[
+     pr('Club clásico',['XXXXXXX+XXXXXXX','X..W..#K#..W..X','X.....###.....X','X..CCCCCCCCC..X','X..CC.C.C.CC..X','X..CCCCCCCCC..X','XQ.C.C...C.C.QX','+.............+','XQ...........QX','XQ...........QX','X.#.........#.X','X..b.......b..X','X.............X','X..W.......W..X','XXXXXXX+XXXXXXX']),
+     pr('DJ en el oeste',['XXXXXXX+XXXXXXX','XQQQQ.....QQQQX','X..B.......B..X','X.W...........X','X.#.CCCCCCCC..X','X#.C.C.C.C.C..X','X#.CCCCCCCC...X','XK..CCC.......+','X#.CCCCCCCC...X','X#.C.C.C.C.C..X','X.#.CCCCCCCC..X','X.W...........X','X..B.......B..X','XQQQQ.....QQQQX','XXXXXXX+XXXXXXX']),
+     pr('Pista en anillo',['XXXXXXX+XXXXXXX','XQQ.........QQX','XQ...#.K.#...QX','X....W###W....X','X..CCCCCCCCC..X','X.CC.CCCCC.CC.X','X.CC.C...C.CC.X','+..C.......C..+','X.CC.C...C.CC.X','X.CC.CC.CC.CC.X','X..CCCC.CCCC..X','X.#.........#.X','X..B.......B..X','X.W.........W.X','XXXXXXX+XXXXXXX'])];
+    function mul(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+    function build(seed,N,R,K,free){
+     const rd=mul(seed),c=N>>1,G=[...Array(N)].map(()=>[...Array(N)].map(()=>({t:'X',own:0,o:null})));
+     const li=R>2?rd()*3|0:R,CL=CEN[li];
+     for(let j=0;j<15;j++)for(let i=0;i<15;i++)G[c-7+j][c-7+i]={t:CL.g[j][i],own:-1,o:CL.o[i+','+j]||null};
+     const boxes=[[c-9,c-9,c+9,c+9]],rooms=[],pool=lib.filter(r=>r.g.flat().includes('+'));
+     for(let a=0;a<K*50&&rooms.length<K;a++){
+      const p=pool[rd()*pool.length|0],r=free?tf(p,rd()*4|0,rd()<.5):cl(p);if(N-1-r.w<1||N-1-r.h<1)continue;
+      const x=1+(rd()*(N-1-r.w)|0),y=1+(rd()*(N-1-r.h)|0),bx=[x-1,y-1,x+r.w+1,y+r.h+1];
+      if(boxes.some(b=>bx[0]<=b[2]&&bx[2]>=b[0]&&bx[1]<=b[3]&&bx[3]>=b[1]))continue;
+      boxes.push(bx);const id=rooms.length+1,ds=[];
+      for(let j=0;j<r.h;j++)for(let i=0;i<r.w;i++){const t=r.g[j][i];G[y+j][x+i]={t,own:id,o:r.o[i+','+j]||null};
+       if(t=='+'){const v=!i?[-1,0]:i==r.w-1?[1,0]:!j?[0,-1]:j==r.h-1?[0,1]:null;if(v)ds.push({x:x+i,y:y+j,v})}}
+      rooms.push({id,x,y,w:r.w,h:r.h,ds,d:Math.abs(x+r.w/2-c)+Math.abs(y+r.h/2-c)})}
+     const conn=new Set([-1]);
+     function link(rm){const q=[],pv=new Map(),K=(x,y)=>y*N+x;
+      rm.ds.forEach(d=>{const x=d.x+d.v[0],y=d.y+d.v[1];if(G[y]?.[x]?.own===0){q.push([x,y]);pv.set(K(x,y),-1)}});
+      while(q.length){const[x,y]=q.shift();
+       if([[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>{const n=G[y+b]?.[x+a];return n&&n.t!='X'&&conn.has(n.own)&&n.own!=rm.id&&n.own!=100+rm.id})){
+        const fr=(x,y)=>G[y]?.[x]?.own===0&&x>0&&y>0&&x<N-1&&y<N-1,cv=(x,y)=>{G[y][x]={t:'.',own:100+rm.id,o:null}};
+        for(let k=K(x,y);k!=-1;k=pv.get(k)){const px=k%N,py=k/N|0;cv(px,py);fr(px+1,py)?cv(px+1,py):fr(px-1,py)&&cv(px-1,py);fr(px,py+1)?cv(px,py+1):fr(px,py-1)&&cv(px,py-1)}conn.add(100+rm.id);return 1}
+       [[1,0],[-1,0],[0,1],[0,-1]].forEach(([a,b])=>{const X=x+a,Y=y+b;if(G[Y]?.[X]?.own===0&&!pv.has(K(X,Y))){pv.set(K(X,Y),K(x,y));q.push([X,Y])}})}
+      return 0}
+     rooms.sort((a,b)=>a.d-b.d);const ok=[];
+     for(const rm of rooms){if(link(rm)){conn.add(rm.id);ok.push(rm)}else for(let j=0;j<rm.h;j++)for(let i=0;i<rm.w;i++)G[rm.y+j][rm.x+i]={t:'X',own:0,o:null}}
+     ok.forEach(rm=>{if(rm.ds.length>1&&rd()<.6)link(rm)});
+     const dist=new Map([[c*N+c,0]]),q=[[c,c]];let far=[c,c];
+     while(q.length){const[x,y]=q.shift();far=[x,y];[[1,0],[-1,0],[0,1],[0,-1]].forEach(([a,b])=>{const n=G[y+b]?.[x+a];if(n&&n.t!='X'&&!dist.has((y+b)*N+x+a)){dist.set((y+b)*N+x+a,1);q.push([x+a,y+b])}})}
+     const fl=[];G.forEach((r,y)=>r.forEach((e,x)=>{if(e.t!='X'&&!e.o&&(x!=c||y!=c))fl.push([x,y])}));
+     let D=null;for(let i=q.length;;){const e=G[far[1]][far[0]];if(!e.o&&(far[0]!=c||far[1]!=c)){D=far}break}
+     const V=[];for(let i=0;i<5&&fl.length;i++)V.push(fl.splice(rd()*fl.length|0,1)[0]);
+     return{G,N,c,D,V,n:ok.length}}
+    lib.push(...necro());
+
+    function toMapString(m) {
+      const { G, N, c, D, V } = m;
+      const tk = ['P@' + c + ',' + c];
+      if (D) tk.push('D@' + D[0] + ',' + D[1]);
+      V.forEach(v => tk.push('V@' + v[0] + ',' + v[1]));
+      G.forEach((r, y) => r.forEach((e, x) => {
+        if (e.o && e.t !== 'X') {
+          const [k, dx, dy] = e.o;
+          tk.push(k + '@' + x + ',' + y + (DIRO.includes(k) ? ':' + dx + ',' + dy : ''));
+        }
+      }));
+      const rows = G.map(r => r.map(e => (e.t === 'X' || e.t === 'S' || e.t === 'I') ? e.t : '.').join('')).join('/');
+      return 'RAVE_MAP_V1|' + N + '|' + rows + '|' + tk.join(';');
+    }
+
+    // opts: { seed, size (41-51, impar), layout (0-2, 3=aleatorio), rooms }
+    function make(opts = {}) {
+      const seed = opts.seed ?? Math.floor(Math.random() * 1e9);
+      return toMapString(build(seed, opts.size || 41, opts.layout ?? 3, opts.rooms || 8, true));
+    }
+    return { make };
+  })();
+
+function generateArena() {
+    if (state.mapMode === 'rooms') {
+      loadMapFromString(ClubGen.make());
+      return;
+    }
+    if (state.mapMode === 'procedural' && state.baseGrid) {
+      config.gridSize = state.baseGrid;
+      state.baseGrid = 0;
+    }
+    if (state.mapMode === 'main_stage') {
+      loadMapFromString(MAIN_STAGE_MAP_STRING);
+      return;
+    }
+
+    const size = config.gridSize;
+    const center = Math.floor(size / 2);
+    state.player = { x: center, y: center, vx: center, vy: center, nudgeX: 0, nudgeY: 0, pulse: 0 };
+    state.isAnchored = false;
+    state.stickyCharge = 0;
+    updateAnchorUI();
+
+    state.obstacles = [];
+    state.collectibles = [];
+    state.shockwaves = [];
+    state.lostRavers = [];
+    state.groupTargets = [];
+
+    state.tiles = Array.from({ length: size }, () => Array(size).fill('normal'));
+    for (let y = 1; y < size - 1; y++) {
+      for (let x = 1; x < size - 1; x++) {
+        if (Math.abs(x - center) <= 1 && Math.abs(y - center) <= 1) continue;
+        const r = Math.random();
+        if (r < 0.11) state.tiles[y][x] = 'sticky';
+        else if (r < 0.23) state.tiles[y][x] = 'slippery';
+      }
+    }
+
+    const doorX = center;
+    const doorY = 0;
+    state.door = { x: doorX, y: doorY, unlocked: false, progress: 0 };
+    state.tiles[1][doorX] = 'normal';
+
+    const occupied = [
+      { x: center, y: center },
+      { x: doorX, y: 1 }
+    ];
+
+    const palettes = [
+      { name: 'Turquesa', color: '#2dd4bf' },
+      { name: 'Lima', color: '#a3e635' }
+    ];
+    const pal = palettes[Math.floor(Math.random() * palettes.length)];
+
+    const groupPos = { x: Math.max(2, center - 3), y: Math.min(size - 3, center + 3) };
+    state.groupTargets.push({ x: groupPos.x, y: groupPos.y, color: pal.color, completed: false });
+    occupied.push(groupPos);
+
+    const mates = [
+      { x: groupPos.x + 1, y: groupPos.y },
+      { x: groupPos.x, y: groupPos.y + 1 }
+    ];
+    for (const m of mates) {
+      if (m.x > 0 && m.y > 0 && m.x < size - 1 && m.y < size - 1) {
+        state.tiles[m.y][m.x] = 'normal';
+        occupied.push(m);
+        state.obstacles.push({
+          type: 'group_mate',
+          color: pal.color,
+          x: m.x,
+          y: m.y,
+          vx: m.x,
+          vy: m.y,
+          dir: { x: 0, y: 0 },
+          charge: 0,
+          isMirroring: false
+        });
+      }
+    }
+
+    const lostX = Math.min(size - 3, center + 3);
+    const lostY = Math.max(2, center - 3);
+    state.tiles[lostY][lostX] = 'normal';
+    occupied.push({ x: lostX, y: lostY });
+
+    state.lostRavers.push({
+      homeX: lostX,
+      homeY: lostY,
+      x: lostX,
+      y: lostY,
+      vx: lostX,
+      vy: lostY,
+      color: pal.color,
+      following: false,
+      reunited: false
+    });
+
+    const enabledTypes = Object.keys(config.types).filter(k => config.types[k]);
+    function isValidPos(x, y, minDist) {
+      if (x <= 0 || y <= 0 || x >= size - 1 || y >= size - 1) return false;
+      if (Math.abs(x - center) + Math.abs(y - center) <= 2) return false;
+      for (const item of occupied) {
+        const dist = Math.max(Math.abs(item.x - x), Math.abs(item.y - y));
+        if (dist < minDist) return false;
+      }
+      return true;
+    }
+
+    if (enabledTypes.length > 0) {
+      let attempts = 0;
+      let guaranteedMirrorPlaced = false;
+
+      while (state.obstacles.filter(o => o.type !== 'group_mate').length < config.obstacleCount && attempts < 1500) {
+        attempts++;
+        const rx = 1 + Math.floor(Math.random() * (size - 2));
+        const ry = 1 + Math.floor(Math.random() * (size - 2));
+        if (!isValidPos(rx, ry, config.minDistance)) continue;
+
+        let type;
+        if (config.types.mirror && !guaranteedMirrorPlaced) {
+          type = 'mirror';
+          guaranteedMirrorPlaced = true;
+        } else {
+          type = enabledTypes[Math.floor(Math.random() * enabledTypes.length)];
+        }
+
+        const dirs = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+        const dir = dirs[Math.floor(Math.random() * dirs.length)];
+        const distToPlayer = Math.abs(rx - center) + Math.abs(ry - center);
+
+        state.obstacles.push({
+          type,
+          x: rx,
+          y: ry,
+          vx: rx,
+          vy: ry,
+          dir,
+          charge: 0,
+          isMirroring: type === 'mirror' && distToPlayer < 8
+        });
+        occupied.push({ x: rx, y: ry });
+      }
+    }
+
+    for (let i = 0; i < 4; i++) {
+      spawnVinyl();
+    }
+  }
+
+  function spawnVinyl() {
+    const size = config.gridSize;
+    for (let i = 0; i < 150; i++) {
+      const rx = 1 + Math.floor(Math.random() * (size - 2));
+      const ry = 1 + Math.floor(Math.random() * (size - 2));
+      if (rx === state.player.x && ry === state.player.y) continue;
+      if (state.tiles[ry]?.[rx] === 'wall') continue;
+      if (state.obstacles.some(o => o.x === rx && o.y === ry)) continue;
+      if (state.lostRavers.some(r => r.x === rx && r.y === ry)) continue;
+      if (state.collectibles.some(c => c.x === rx && c.y === ry)) continue;
+      state.collectibles.push({ x: rx, y: ry, phase: Math.random() * Math.PI * 2 });
+      break;
+    }
+  }
+
+  function isCellBlocked(x, y, ignoreObs = null) {
+    const size = config.gridSize;
+    if (x < 0 || y < 0 || x >= size || y >= size) return true;
+    if (state.tiles[y]?.[x] === 'wall') return true;
+    if (state.door && !state.door.unlocked && state.door.x === x && state.door.y === y) return true;
+    for (const o of state.obstacles) {
+      if (o === ignoreObs) continue;
+      if (o.x === x && o.y === y) return true;
+    }
+    return false;
+  }
+
+  function resetCombo() {
+    if (state.combo > 1) {
+      state.combo = 1;
+      updateHud();
+    }
+    for (const lr of state.lostRavers) {
+      if (!lr.reunited && lr.following) {
+        lr.following = false;
+        lr.x = lr.homeX;
+        lr.y = lr.homeY;
+        showFeedback('RAVER PERDIDO VOLVIÓ AL INICIO', '#9b8ec4');
+      }
+    }
+  }
+
+  function updateMirrorNPCs(playerDx, playerDy) {
+    for (const obs of state.obstacles) {
+      if (obs.type !== 'mirror') continue;
+
+      const distance = Math.abs(obs.x - state.player.x) + Math.abs(obs.y - state.player.y);
+      if (distance < 8) {
+        obs.isMirroring = true;
+        const mirrorDx = -playerDx || 0;
+        const mirrorDy = -playerDy || 0;
+
+        if (mirrorDx !== 0 || mirrorDy !== 0) {
+          const tx = obs.x + mirrorDx;
+          const ty = obs.y + mirrorDy;
+
+          if (tx === state.player.x && ty === state.player.y) {
+            if (!isNpcBlinking(obs)) {
+              setNpcBlinkState(obs, 10);
+              damagePlayer('Chocaste con tu reflejo (NPC Espejo).', false);
+            }
+            continue;
+          }
+
+          if (!isCellBlocked(tx, ty, obs)) {
+            obs.x = tx;
+            obs.y = ty;
+
+            if (state.tiles[ty]?.[tx] === 'slippery') {
+              const sx = tx + mirrorDx;
+              const sy = ty + mirrorDy;
+              if (sx === state.player.x && sy === state.player.y) {
+                if (!isNpcBlinking(obs)) {
+                  setNpcBlinkState(obs, 10);
+                  damagePlayer('Un NPC Espejo resbaló directo hacia ti.', false);
+                }
+                continue;
+              }
+              if (!isCellBlocked(sx, sy, obs)) {
+                obs.x = sx;
+                obs.y = sy;
+              }
+            }
+          }
+        }
+      } else {
+        obs.isMirroring = false;
+      }
+    }
+    return false;
+  }
+
+  function refreshMirrorStates() {
+    for (const obs of state.obstacles) {
+      if (obs.type === 'mirror') {
+        const distance = Math.abs(obs.x - state.player.x) + Math.abs(obs.y - state.player.y);
+        obs.isMirroring = distance < 8;
+      }
+    }
+  }
+
+  function updateLostRavers() {
+    for (const lr of state.lostRavers) {
+      if (lr.reunited) continue;
+
+      const distToPlayer = Math.max(Math.abs(lr.x - state.player.x), Math.abs(lr.y - state.player.y));
+
+      if (!lr.following && state.combo >= 3 && distToPlayer <= 2) {
+        lr.following = true;
+        audio.playSfx('pickup');
+        showFeedback('¡RAVER PERDIDO ACTIVADO! (TE SIGUE)', lr.color);
+      }
+
+      if (lr.following) {
+        const nearGroup = state.groupTargets.some(g =>
+          !g.completed &&
+          g.color === lr.color &&
+          Math.max(Math.abs(lr.x - g.x), Math.abs(lr.y - g.y)) <= 1
+        );
+
+        if (nearGroup) {
+          lr.following = false;
+          lr.reunited = true;
+          state.score += 1;
+          state.dropTimer = 8;
+          state.groupTargets.forEach(g => { if (g.color === lr.color) g.completed = true; });
+          audio.playSfx('pickup');
+          showFeedback('¡REUNIDO CON SU GRUPO! +1 VINYL', '#fee440');
+          updateHud();
+          continue;
+        }
+
+        const dx = state.player.x - lr.x;
+        const dy = state.player.y - lr.y;
+        let stepX = 0;
+        let stepY = 0;
+        if (Math.abs(dx) >= Math.abs(dy) && dx !== 0) stepX = Math.sign(dx);
+        else if (dy !== 0) stepY = Math.sign(dy);
+
+        const nx = lr.x + stepX;
+        const ny = lr.y + stepY;
+        if ((stepX !== 0 || stepY !== 0) && !(nx === state.player.x && ny === state.player.y) && !isCellBlocked(nx, ny)) {
+          lr.x = nx;
+          lr.y = ny;
+        }
+      }
+    }
+  }
+
+  function onBeatTick() {
+    if (state.screen !== 'playing') return;
+
+    if (state.beatIndex > 0 && !state.playerMovedThisBeat) {
+      resetCombo();
+    }
+
+    state.beatIndex++;
+    state.lastBeatTime = performance.now();
+    state.playerMovedThisBeat = false;
+    state.shake = 5;
+    state.beatFlash = 1;
+    state.player.pulse = 1;
+    if (state.dropTimer > 0) state.dropTimer--;
+
+    updateLostRavers();
+
+    for (const obs of state.obstacles) {
+      if (obs.type === 'group_mate' || obs.type === 'mirror' || obs.type === 'crowd' || obs.type === 'dj' || obs.type === 'pillar' || obs.type === 'bar') continue;
+
+      if (obs.type === 'subwoofer') {
+        if (state.beatIndex % 2 === 0) {
+          state.shockwaves.push({ x: obs.x, y: obs.y, radius: 0.2, alpha: 0.95 });
+          const dx = state.player.x - obs.x;
+          const dy = state.player.y - obs.y;
+          if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1 && !(dx === 0 && dy === 0)) {
+            if (state.isAnchored) {
+              state.player.nudgeX = Math.sign(dx) * 0.18;
+              state.player.nudgeY = Math.sign(dy) * 0.18;
+              showFeedback('⚓ ANCLADO (RESISTE)', '#fee440');
+            } else {
+              const pushX = Math.sign(dx);
+              const pushY = Math.sign(dy);
+              const tx = state.player.x + pushX;
+              const ty = state.player.y + pushY;
+              if (!isCellBlocked(tx, ty)) {
+                state.player.x = tx;
+                state.player.y = ty;
+                state.stickyCharge = 0;
+                audio.playSfx('push');
+                showFeedback('BASS PUSH!', '#9b5de5');
+              }
+            }
+          }
+        }
+      } else if (obs.type === 'bouncer' || obs.type === 'dj_bot') {
+        const nx = obs.x + obs.dir.x;
+        const ny = obs.y + obs.dir.y;
+        if (nx === state.player.x && ny === state.player.y) {
+          if (!isNpcBlinking(obs)) {
+            setNpcBlinkState(obs, 10);
+            damagePlayer(obs.type === 'dj_bot' ? 'Te interceptó un DJ Bot.' : 'Un Bouncer chocó contigo.', false);
+          }
+          obs.dir.x *= -1;
+          obs.dir.y *= -1;
+          continue;
+        }
+        if (!isCellBlocked(nx, ny, obs)) {
+          obs.x = nx;
+          obs.y = ny;
+        } else {
+          obs.dir.x *= -1;
+          obs.dir.y *= -1;
+        }
+      } else if (obs.type === 'dasher') {
+        if (state.beatIndex % 2 === 1) {
+          obs.charge = 1;
+          const dx = state.player.x - obs.x;
+          const dy = state.player.y - obs.y;
+          if (Math.abs(dx) >= Math.abs(dy)) {
+            obs.dir = { x: Math.sign(dx) || 1, y: 0 };
+          } else {
+            obs.dir = { x: 0, y: Math.sign(dy) || 1 };
+          }
+        } else {
+          obs.charge = 0;
+          const nx = obs.x + obs.dir.x;
+          const ny = obs.y + obs.dir.y;
+          if (nx === state.player.x && ny === state.player.y) {
+            if (!isNpcBlinking(obs)) {
+              setNpcBlinkState(obs, 10);
+              damagePlayer('Un Raver Saltarín chocó contigo.', false);
+            }
+            continue;
+          }
+          if (!isCellBlocked(nx, ny, obs)) {
+            obs.x = nx;
+            obs.y = ny;
+          }
+        }
+      } else if (obs.type === 'dancer') {
+        if (state.beatIndex % 2 === 0) {
+          const nx = obs.x + obs.dir.x;
+          const ny = obs.y + obs.dir.y;
+          if (nx === state.player.x && ny === state.player.y) {
+            if (!isNpcBlinking(obs)) {
+              setNpcBlinkState(obs, 10);
+              damagePlayer('Chocaste con un Raver Bailarín.', false);
+            }
+            obs.dir.x *= -1;
+            obs.dir.y *= -1;
+            continue;
+          }
+          if (!isCellBlocked(nx, ny, obs)) {
+            obs.x = nx;
+            obs.y = ny;
+          }
+          obs.dir.x *= -1;
+          obs.dir.y *= -1;
+        }
+      }
+    }
+
+    refreshMirrorStates();
+    updateLostRavers();
+    checkCollectibles();
+    updateDoorUI();
+  }
+
+  function checkBeatWindow() {
+    const beatDuration = (60 / config.bpm) * 1000;
+    const elapsed = performance.now() - state.lastBeatTime;
+    const phase = (elapsed % beatDuration) / beatDuration;
+    const distFromBeat = Math.min(phase, 1 - phase);
+    const maxDist = (config.beatTolerance / 100) * 0.5;
+    return {
+      onBeat: distFromBeat <= maxDist && !state.playerMovedThisBeat,
+      perfect: distFromBeat < Math.min(0.22, maxDist * 0.45)
+    };
+  }
+
+  function isStandingInFrontOfDoor() {
+    if (!state.door) return false;
+    const dist = Math.abs(state.player.x - state.door.x) + Math.abs(state.player.y - state.door.y);
+    return dist === 1;
+  }
+
+  function updateDoorUI() {
+    if (!state.door || state.door.unlocked) {
+      doorBadge.classList.add('hidden');
+      return;
+    }
+    if (isStandingInFrontOfDoor()) {
+      doorBadge.classList.remove('hidden');
+      doorBadge.textContent = `🚪 PUERTA: ${state.door.progress}/5 PASOS CLAVADO`;
+    } else {
+      doorBadge.classList.add('hidden');
+    }
+  }
+
+  function advanceDoorSequenceIfAnchored() {
+    if (!state.door || state.door.unlocked) return false;
+    if (state.isAnchored && isStandingInFrontOfDoor()) {
+      state.door.progress++;
+      if (state.door.progress >= 5) {
+        state.door.unlocked = true;
+        state.score += 2;
+        audio.playSfx('door_open');
+        showFeedback('🚪 ¡PUERTA DESBLOQUEADA! +2 VINYLS', '#00f5d4');
+      } else {
+        audio.playSfx('door_tick');
+        showFeedback(`🚪 SECUENCIA PUERTA ${state.door.progress}/5`, '#00f5d4');
+      }
+      updateDoorUI();
+      updateHud();
+      return true;
+    }
+    return false;
+  }
+
+  function toggleAnchor() {
+    if (state.screen !== 'playing') return;
+
+    const timing = checkBeatWindow();
+    if (!timing.onBeat) {
+      resetCombo();
+      audio.playSfx('miss');
+      showFeedback('OFF BEAT!', '#ff2a85');
+      return;
+    }
+
+    state.playerMovedThisBeat = true;
+    state.isAnchored = !state.isAnchored;
+    state.anchorSquash = 1;
+    state.steps++;
+    state.combo++;
+    if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+
+    updateAnchorUI();
+    updateDoorUI();
+    updateHud();
+
+    if (state.isAnchored) {
+      audio.playSfx('anchor_on');
+      showFeedback('⚓ CLAVADO (1 PULSO)', '#fee440');
+    } else {
+      audio.playSfx('anchor_off');
+      showFeedback('🔓 LIBERADO (1 PULSO)', '#00f5d4');
+    }
+  }
+
+  function updateAnchorUI() {
+    if (state.isAnchored) {
+      anchorBadge.classList.remove('hidden');
+      btnAnchorPad.classList.add('active');
+    } else {
+      anchorBadge.classList.add('hidden');
+      btnAnchorPad.classList.remove('active');
+    }
+  }
+
+  function tryMovePlayer(dx, dy) {
+    if (state.screen !== 'playing') return;
+
+    const timing = checkBeatWindow();
+    if (!timing.onBeat) {
+      resetCombo();
+      audio.playSfx('miss');
+      showFeedback('OFF BEAT!', '#ff2a85');
+      return;
+    }
+
+    state.playerMovedThisBeat = true;
+
+    if (state.isAnchored) {
+      state.player.nudgeX = dx * 0.26;
+      state.player.nudgeY = dy * 0.26;
+      state.steps++;
+      state.combo++;
+      if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+
+      const countedForDoor = advanceDoorSequenceIfAnchored();
+      if (!countedForDoor) {
+        audio.playSfx('anchor_step');
+        showFeedback(timing.perfect ? '⚓ PERFECT IN-PLACE!' : '⚓ PASO CLAVADO', '#fee440');
+      }
+      updateLostRavers();
+      updateHud();
+      return;
+    }
+
+    const currentTile = state.tiles[state.player.y]?.[state.player.x] || 'normal';
+    if (currentTile === 'sticky' && state.stickyCharge < 1) {
+      state.stickyCharge = 1;
+      state.player.nudgeX = dx * 0.1;
+      state.player.nudgeY = dy * 0.1;
+      state.steps++;
+      state.combo++;
+      if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+      audio.playSfx('sticky');
+      showFeedback('🟣 PISO PEGAJOSO (DESPEGANDO...)', '#c084fc');
+      updateHud();
+      return;
+    }
+
+    const tx = state.player.x + dx;
+    const ty = state.player.y + dy;
+    const size = config.gridSize;
+
+    if (tx < 0 || ty < 0 || tx >= size || ty >= size || state.tiles[ty]?.[tx] === 'wall') {
+      state.player.nudgeX = dx * 0.2;
+      state.player.nudgeY = dy * 0.2;
+      state.steps++;
+      state.combo++;
+      if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+      updateHud();
+      audio.playSfx('anchor_step');
+      showFeedback('MURO (EN RITMO)', '#00f5d4');
+      return;
+    }
+
+    if (state.door && !state.door.unlocked && state.door.x === tx && state.door.y === ty) {
+      state.player.nudgeX = dx * 0.2;
+      state.player.nudgeY = dy * 0.2;
+      state.steps++;
+      state.combo++;
+      if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+      updateHud();
+      audio.playSfx('anchor_step');
+      showFeedback('🚪 PUERTA CERRADA (CLÁVATE ⚓)', '#f59e0b');
+      return;
+    }
+
+    const hitObs = state.obstacles.find(o => o.x === tx && o.y === ty);
+    if (hitObs) {
+      if (['pillar', 'subwoofer', 'group_mate', 'crowd', 'dj', 'bar'].includes(hitObs.type)) {
+        state.player.nudgeX = dx * 0.22;
+        state.player.nudgeY = dy * 0.22;
+        state.steps++;
+        state.combo++;
+        if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+        updateHud();
+        audio.playSfx('anchor_step');
+        showFeedback('OBSTÁCULO (SIGUES EN RITMO)', '#c084fc');
+        return;
+      } else if (hitObs.type === 'mirror') {
+        triggerGameOver('Chocaste con un NPC Espejo.');
+        return;
+      } else {
+        triggerGameOver('Chocaste con un Raver en la pista.');
+        return;
+      }
+    }
+
+    const prevX = state.player.x;
+    const prevY = state.player.y;
+
+    state.player.x = tx;
+    state.player.y = ty;
+    state.stickyCharge = 0;
+    state.steps++;
+    state.combo++;
+    if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+
+    const landedTile = state.tiles[ty][tx];
+    let slipped = false;
+
+    if (landedTile === 'slippery') {
+      const sx = tx + dx;
+      const sy = ty + dy;
+      const doorClosedAhead = state.door && !state.door.unlocked && state.door.x === sx && state.door.y === sy;
+      const obsAhead = state.obstacles.some(o => o.x === sx && o.y === sy) || state.tiles[sy]?.[sx] === 'wall';
+      if (sx >= 0 && sy >= 0 && sx < size && sy < size && !doorClosedAhead && !obsAhead) {
+        state.player.x = sx;
+        state.player.y = sy;
+        slipped = true;
+      }
+    }
+
+    const actualDx = state.player.x - prevX;
+    const actualDy = state.player.y - prevY;
+
+    if (updateMirrorNPCs(actualDx, actualDy)) {
+      return;
+    }
+
+    if (slipped) {
+      audio.playSfx('slip');
+      showFeedback('🔵 ¡RESBALÓN!', '#38bdf8');
+    } else if (state.tiles[state.player.y][state.player.x] === 'sticky') {
+      audio.playSfx('sticky');
+      showFeedback('🟣 PISO PEGAJOSO', '#c084fc');
+    } else {
+      audio.playSfx('step');
+      showFeedback(timing.perfect ? 'PERFECT!' : 'ON BEAT', '#00f5d4');
+    }
+
+    updateLostRavers();
+    checkCollectibles();
+    updateDoorUI();
+    updateHud();
+  }
+
+  function checkCollectibles() {
+    const idx = state.collectibles.findIndex(c => c.x === state.player.x && c.y === state.player.y);
+    if (idx !== -1) {
+      state.collectibles.splice(idx, 1);
+      state.score += 1;
+      state.dropTimer = 8;
+      audio.playSfx('pickup');
+      showFeedback('VINYL +1 (DROP!)', '#fee440');
+      spawnVinyl();
+      updateHud();
+    }
+  }
+
+  let feedbackTimeout = null;
+  function showFeedback(text, color) {
+    beatFeedback.textContent = text;
+    beatFeedback.style.color = color;
+    beatFeedback.style.opacity = '1';
+    if (feedbackTimeout) clearTimeout(feedbackTimeout);
+    feedbackTimeout = setTimeout(() => {
+      beatFeedback.style.opacity = '0';
+    }, 360);
+  }
+
+  function updateHud() {
+    document.getElementById('stepsVal').textContent = state.steps;
+    document.getElementById('comboVal').textContent = 'x' + state.combo;
+    document.getElementById('scoreVal').textContent = state.score;
+  }
+
+  function showScreen(name) {
+    startScreen.classList.add('hidden');
+    gameOverScreen.classList.add('hidden');
+    settingsModal.classList.add('hidden');
+
+    if (name === 'start') {
+      state.screen = 'start';
+      hud.classList.add('hidden');
+      anchorBadge.classList.add('hidden');
+      doorBadge.classList.add('hidden');
+      beatBarContainer.classList.add('hidden');
+      dpad.classList.add('hidden');
+      startScreen.classList.remove('hidden');
+      audio.stop();
+      stopFallbackClock();
+    } else if (name === 'playing') {
+      state.screen = 'playing';
+      hud.classList.remove('hidden');
+      beatBarContainer.classList.remove('hidden');
+      updateAnchorUI();
+      updateDoorUI();
+      if (state.showDpad) dpad.classList.remove('hidden');
+      else dpad.classList.add('hidden');
+      resize();
+    } else if (name === 'gameover') {
+      state.screen = 'gameover';
+      hud.classList.add('hidden');
+      anchorBadge.classList.add('hidden');
+      doorBadge.classList.add('hidden');
+      beatBarContainer.classList.add('hidden');
+      dpad.classList.add('hidden');
+      gameOverScreen.classList.remove('hidden');
+      audio.stop();
+      stopFallbackClock();
+    }
+  }
+
+  function startGameWithMode(mode) {
+    state.mapMode = mode;
+    state.steps = 0;
+    state.combo = 1;
+    state.maxCombo = 1;
+    state.score = 0;
+    state.beatIndex = 0;
+    state.dropTimer = 0;
+    state.playerMovedThisBeat = false;
+    state.isAnchored = false;
+    state.stickyCharge = 0;
+    generateArena();
+    updateHud();
+    showScreen('playing');
+    audio.start();
+    startFallbackClock();
+  }
+
+  function triggerGameOver(reason) {
+    document.getElementById('gameOverReason').textContent = reason;
+    document.getElementById('finalSteps').textContent = state.steps;
+    document.getElementById('finalCombo').textContent = 'x' + state.maxCombo;
+    document.getElementById('finalScore').textContent = state.score;
+    audio.playSfx('miss');
+    showScreen('gameover');
+  }
+
+  let previousScreenBeforeSettings = 'start';
+
+  function syncSettingsUI() {
+    document.getElementById('inpBpm').value = config.bpm;
+    document.getElementById('valBpm').textContent = config.bpm + ' BPM';
+
+    document.getElementById('inpTolerance').value = config.beatTolerance;
+    document.getElementById('valTolerance').textContent = config.beatTolerance + '%';
+
+    document.getElementById('inpTileSize').value = config.tileSize;
+    document.getElementById('valTileSize').textContent = config.tileSize + ' px';
+
+    document.getElementById('inpGridSize').value = config.gridSize;
+    document.getElementById('valGridSize').textContent = config.gridSize + ' x ' + config.gridSize;
+
+    document.getElementById('inpObsCount').value = config.obstacleCount;
+    document.getElementById('valObsCount').textContent = config.obstacleCount;
+
+    document.getElementById('inpMinDist').value = config.minDistance;
+    document.getElementById('valMinDist').textContent = config.minDistance + ' celdas';
+
+    document.getElementById('chkSubwoofer').checked = config.types.subwoofer;
+    document.getElementById('chkDancer').checked = config.types.dancer;
+    document.getElementById('chkBouncer').checked = config.types.bouncer;
+    document.getElementById('chkDasherBox').checked = config.types.dasher;
+    document.getElementById('chkPillar').checked = config.types.pillar;
+    document.getElementById('chkMirror').checked = config.types.mirror;
+  }
+
+  function openSettings() {
+    if (state.screen !== 'paused') {
+      previousScreenBeforeSettings = state.screen;
+    }
+    if (state.screen === 'playing') {
+      state.screen = 'paused';
+      audio.stop();
+      stopFallbackClock();
+    }
+    syncSettingsUI();
+    settingsModal.classList.remove('hidden');
+  }
+
+  function closeSettings(regenerate) {
+    settingsModal.classList.add('hidden');
+    if (regenerate) {
+      if (previousScreenBeforeSettings === 'playing') {
+        startGameWithMode(state.mapMode);
+      } else {
+        generateArena();
+        showScreen(previousScreenBeforeSettings);
+      }
+    } else {
+      if (previousScreenBeforeSettings === 'playing') {
+        showScreen('playing');
+        audio.start();
+        startFallbackClock();
+      } else {
+        showScreen(previousScreenBeforeSettings);
+      }
+    }
+  }
+
+  document.getElementById('inpBpm').addEventListener('input', e => {
+    config.bpm = parseInt(e.target.value, 10);
+    document.getElementById('valBpm').textContent = config.bpm + ' BPM';
+  });
+
+  document.getElementById('inpTolerance').addEventListener('input', e => {
+    config.beatTolerance = parseInt(e.target.value, 10);
+    document.getElementById('valTolerance').textContent = config.beatTolerance + '%';
+  });
+
+  document.getElementById('inpTileSize').addEventListener('input', e => {
+    config.tileSize = parseInt(e.target.value, 10);
+    document.getElementById('valTileSize').textContent = config.tileSize + ' px';
+  });
+
+  document.getElementById('inpGridSize').addEventListener('input', e => {
+    config.gridSize = parseInt(e.target.value, 10);
+    document.getElementById('valGridSize').textContent = config.gridSize + ' x ' + config.gridSize;
+  });
+
+  document.getElementById('inpObsCount').addEventListener('input', e => {
+    config.obstacleCount = parseInt(e.target.value, 10);
+    document.getElementById('valObsCount').textContent = config.obstacleCount;
+  });
+
+  document.getElementById('inpMinDist').addEventListener('input', e => {
+    config.minDistance = parseInt(e.target.value, 10);
+    document.getElementById('valMinDist').textContent = config.minDistance + ' celdas';
+  });
+
+  document.getElementById('chkSubwoofer').addEventListener('change', e => config.types.subwoofer = e.target.checked);
+  document.getElementById('chkDancer').addEventListener('change', e => config.types.dancer = e.target.checked);
+  document.getElementById('chkBouncer').addEventListener('change', e => config.types.bouncer = e.target.checked);
+  document.getElementById('chkDasherBox').addEventListener('change', e => config.types.dasher = e.target.checked);
+  document.getElementById('chkPillar').addEventListener('change', e => config.types.pillar = e.target.checked);
+  document.getElementById('chkMirror').addEventListener('change', e => config.types.mirror = e.target.checked);
+
+  document.getElementById('btnStartProcedural').addEventListener('click', () => startGameWithMode('procedural'));
+  document.getElementById('btnStartMainStage').addEventListener('click', () => startGameWithMode('main_stage'));
+  document.getElementById('btnStartClub').addEventListener('click', () => startGameWithMode('rooms'));
+  document.getElementById('btnRestart').addEventListener('click', () => startGameWithMode(state.mapMode));
+  document.getElementById('btnBackToMenuOver').addEventListener('click', () => {
+    state.mapMode = 'procedural';
+    generateArena();
+    showScreen('start');
+  });
+
+  document.getElementById('btnOpenSettingsStart').addEventListener('click', openSettings);
+  document.getElementById('btnOpenSettingsHud').addEventListener('click', openSettings);
+  document.getElementById('btnOpenSettingsOver').addEventListener('click', openSettings);
+
+  document.getElementById('btnApplySettings').addEventListener('click', () => closeSettings(true));
+  document.getElementById('btnCloseSettings').addEventListener('click', () => closeSettings(false));
+  document.getElementById('btnResetDefaults').addEventListener('click', () => {
+    config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+    syncSettingsUI();
+  });
+
+  document.getElementById('btnTogglePad').addEventListener('click', () => {
+    state.showDpad = !state.showDpad;
+    if (state.showDpad && state.screen === 'playing') dpad.classList.remove('hidden');
+    else dpad.classList.add('hidden');
+  });
+
+  document.querySelectorAll('.pad-btn[data-dir]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const [dx, dy] = btn.dataset.dir.split(',').map(Number);
+      tryMovePlayer(dx, dy);
+    });
+  });
+
+  btnAnchorPad.addEventListener('click', toggleAnchor);
+
+  window.addEventListener('keydown', e => {
+    if (state.screen !== 'playing') return;
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') tryMovePlayer(0, -1);
+    else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') tryMovePlayer(0, 1);
+    else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') tryMovePlayer(-1, 0);
+    else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') tryMovePlayer(1, 0);
+    else if (e.code === 'Space' || e.key === ' ') {
+      e.preventDefault();
+      toggleAnchor();
+    }
+  });
+
+  let touchStartX = 0;
+  let touchStartY = 0;
+
+  canvas.addEventListener('touchstart', e => {
+    if (e.touches.length > 0) {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }
+  }, { passive: true });
+
+  canvas.addEventListener('touchend', e => {
+    if (state.screen !== 'playing' || e.changedTouches.length === 0) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 22) return;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      tryMovePlayer(dx > 0 ? 1 : -1, 0);
+    } else {
+      tryMovePlayer(0, dy > 0 ? 1 : -1);
+    }
+  }, { passive: true });
+
+  function resize() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * window.devicePixelRatio;
+    canvas.height = rect.height * window.devicePixelRatio;
+    ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+
+    const bRect = beatBarContainer.getBoundingClientRect();
+    if (bRect.width > 0 && bRect.height > 0) {
+      beatCanvas.width = bRect.width * window.devicePixelRatio;
+      beatCanvas.height = bRect.height * window.devicePixelRatio;
+      bCtx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+    }
+  }
+  window.addEventListener('resize', resize);
+
+  /* =====================================================================
+     SPRITES — carga assets/manifest.js (si no existe, el juego sigue con
+     los gráficos vectoriales originales). Opciones por URL:
+       ?skin=1..4   personaje del jugador (azul, rosa, cian, café)
+       ?sprites=0   desactiva los sprites (modo placeholder)
+     ===================================================================== */
+  const SPR = (() => {
+    const M = window.SPRITE_MANIFEST;
+    const qs = new URLSearchParams(location.search);
+    const skin = Math.min(4, Math.max(1, parseInt(qs.get('skin'), 10) || 1));
+    const imgs = {}, sheets = {};
+    if (M && qs.get('sprites') !== '0') {
+      for (const [k, v] of Object.entries(M.images)) { const i = new Image(); i.src = v[0]; imgs[k] = i; }
+      for (const [k, v] of Object.entries(M.sheets)) { const i = new Image(); i.src = v.src; sheets[k] = Object.assign({ img: i }, v); }
+    }
+    const ok = i => !!(i && i.complete && i.naturalWidth > 0);
+    const get = n => (ok(imgs[n]) ? imgs[n] : null);
+    const halfBeat = () => (60 / config.bpm) * 500;
+    let face = 1, deadAt = 0;
+
+    function shadow(ctx, x, y, ts, k) {
+      ctx.fillStyle = 'rgba(0,0,0,0.38)';
+      ctx.beginPath();
+      ctx.ellipse(x, y, ts * 0.27 * (k || 1), ts * 0.09 * (k || 1), 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Imagen suelta, ajustada a un cuadro 'box' y centrada en (cx, cy)
+    function fit(ctx, name, cx, cy, box, o) {
+      const im = get(name); if (!im) return false;
+      o = o || {};
+      const sc = Math.min(box / im.naturalWidth, box / im.naturalHeight);
+      const w = im.naturalWidth * sc, h = im.naturalHeight * sc;
+      ctx.save();
+      if (o.alpha != null) ctx.globalAlpha = o.alpha;
+      if (o.glow) { ctx.shadowColor = o.glow; ctx.shadowBlur = o.blur || 10; }
+      ctx.translate(cx, cy);
+      if (o.flip) ctx.scale(-1, 1);
+      ctx.drawImage(im, -w / 2, -h / 2, w, h);
+      ctx.restore();
+      return true;
+    }
+    // Frame de un spritesheet (ancla: pies al centro-abajo)
+    function frame(ctx, sheet, anim, f, cx, baseY, scale, o) {
+      const sh = sheets[sheet]; if (!sh || !ok(sh.img)) return false;
+      const a = sh.anims[anim]; if (!a) return false;
+      o = o || {};
+      const col = o.hold ? Math.min(Math.max(f, 0), a.n - 1) : ((f % a.n) + a.n) % a.n;
+      const dw = sh.cw * scale, dh = sh.ch * scale;
+      ctx.save();
+      if (o.alpha != null) ctx.globalAlpha = o.alpha;
+      if (o.glow) { ctx.shadowColor = o.glow; ctx.shadowBlur = o.blur || 10; }
+      ctx.translate(cx, baseY);
+      if (o.flip) ctx.scale(-1, 1);
+      if (o.squash) ctx.scale(1, o.squash);
+      ctx.drawImage(sh.img, col * sh.cw, a.row * sh.ch, sh.cw, sh.ch, -dw / 2, -dh, dw, dh);
+      ctx.restore();
+      return true;
+    }
+    const hash = s => { let h = 0; s = String(s || ''); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); };
+
+    function drawTile(ctx, type, gx, gy, ts, isEven, pulse) {
+      const name = type === 'wall' ? 'tile_metal_b'
+        : type === 'sticky' ? 'tile_purple'
+        : type === 'slippery' ? 'tile_ice'
+        : (isEven ? 'tile_stone_mid' : 'tile_stone_navy');
+      const im = get(name); if (!im) return false;
+      ctx.drawImage(im, gx * ts, gy * ts, ts, ts);
+      if (type !== 'wall' && type !== 'sticky' && type !== 'slippery' && isEven) {
+        ctx.fillStyle = 'rgba(255, 42, 133,' + (pulse * 0.13) + ')';
+        ctx.fillRect(gx * ts, gy * ts, ts, ts);
+      }
+      return true;
+    }
+    function drawDoor(ctx, dx, dy, ts, door) {
+      return fit(ctx, door.unlocked ? 'ladder_green' : 'crate_gold', dx + ts / 2, dy + ts / 2, ts * 0.94,
+        { glow: door.unlocked ? '#00f5d4' : '#fbbf24', blur: 12 });
+    }
+    function drawCoin(ctx, cx, cy, ts, pulse) {
+      return fit(ctx, 'coin', cx, cy, ts * (0.5 + pulse * 0.1), { glow: '#fee440', blur: 14 });
+    }
+    function drawFloorItem(ctx, fi, fx, fy, ts) {
+      const map = { shades: ['shield_orange', '#38bdf8'], cigarettes: ['canister_green', '#fb923c'], drop_item: ['star', '#fee440'] };
+      const m = map[fi.type] || map.drop_item;
+      return fit(ctx, m[0], fx, fy, ts * 0.66, { glow: m[1], blur: 14 });
+    }
+    function drawPlayer(ctx, px, py, ts, pulse, now, state) {
+      if (!sheets['player' + skin] || !ok(sheets['player' + skin].img)) return false;
+      const p = state.player, S = ts / 54;
+      const dx = p.x - p.vx, dy = p.y - p.vy;
+      if (dx > 0.08) face = 1; else if (dx < -0.08) face = -1;
+      let anim = 'idle', f = Math.floor(now / halfBeat()), hold = false;
+      if (state.screen === 'gameover') {
+        if (!deadAt) deadAt = now;
+        anim = 'die'; f = Math.floor((now - deadAt) / 110); hold = true;
+      } else {
+        deadAt = 0;
+        if (now < (window.__hurtUntil || 0)) { anim = 'hurt'; f = Math.floor(now / 80); }
+        else if (Math.abs(dx) + Math.abs(dy) > 0.08) { anim = 'run'; f = Math.floor(now / 75); }
+      }
+      const base = py + ts * 0.44;
+      shadow(ctx, px, base - ts * 0.02, ts, 1.05);
+      return frame(ctx, 'player' + skin, anim, f, px, base, S,
+        { flip: face < 0, hold, squash: 1 + pulse * 0.05 + state.anchorSquash * 0.1,
+          glow: state.isAnchored ? '#fee440' : '#00f5d4', blur: 14 });
+    }
+    // Raver perdido / compañero de grupo: usa los skins de jugador con brillo del color del grupo
+    function drawRaver(ctx, color, x, y, ts, pulse, now) {
+      const sk = 1 + (hash(color) % 4), S = ts / 54, base = y + ts * 0.42;
+      if (!sheets['player' + sk] || !ok(sheets['player' + sk].img)) return false;
+      shadow(ctx, x, base - ts * 0.02, ts);
+      return frame(ctx, 'player' + sk, 'idle', Math.floor(now / halfBeat()), x, base, S,
+        { squash: 1 + pulse * 0.05, glow: color, blur: 10 });
+    }
+    const ENEMY = { bouncer: 'soldier', dasher: 'ninja', dancer: 'alien', mirror: 'robot' };
+    function drawObstacle(ctx, obs, ox, oy, ts, pulse, now) {
+      const S = ts / 54, base = oy + ts * 0.42, f = Math.floor(now / halfBeat());
+      const t = obs.type;
+      if (t === 'group_mate') return drawRaver(ctx, obs.color, ox, oy, ts, pulse, now);
+      if (ENEMY[t]) {
+        if (!sheets.enemies || !ok(sheets.enemies.img)) return false;
+        shadow(ctx, ox, base - ts * 0.02, ts, 1.05);
+        let glow = null, blur = 10, alpha = 1, flip = false;
+        if (t === 'dasher') { glow = obs.charge ? '#ffffff' : '#ff7b00'; blur = obs.charge ? 20 : 8; }
+        if (t === 'bouncer') { glow = '#ff2a85'; blur = 8; }
+        if (t === 'dancer') { flip = Math.floor(now / (halfBeat() * 2)) % 2 === 0; }
+        if (t === 'mirror') {
+          if (obs.isMirroring) {
+            glow = '#38bdf8'; blur = 16;
+            ctx.beginPath(); ctx.arc(ox, oy, ts * 0.46, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(125, 211, 252, 0.85)'; ctx.lineWidth = 2;
+            ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
+          } else alpha = 0.7;
+        }
+        return frame(ctx, 'enemies', ENEMY[t], f, ox, base, S * 0.95,
+          { flip, alpha, glow, blur, squash: 1 + pulse * 0.05 });
+      }
+      if (t === 'subwoofer') return fit(ctx, 'barrel_big', ox, oy, ts * (0.88 + pulse * 0.08), { glow: '#9b5de5', blur: 8 + pulse * 10 });
+      if (t === 'pillar') return fit(ctx, 'rock_a', ox, oy + ts * 0.04, ts * 0.98);
+      if (t === 'bar') return fit(ctx, 'desk_console', ox, oy, ts * 1.0);
+      if (t === 'dj') return fit(ctx, 'server_big', ox, oy, ts * (0.98 + pulse * 0.03), { glow: '#fee440', blur: 8 });
+      if (t === 'dj_bot') {
+        shadow(ctx, ox, oy + ts * 0.38, ts);
+        return fit(ctx, 'npc_robot_white', ox, oy - pulse * 2, ts * 0.9, { glow: '#10b981', blur: 10 });
+      }
+      if (t === 'crowd') {
+        const PEOPLE = ['npc_hat', 'npc_nurse', 'npc_agent', 'npc_scientist', 'npc_ninja_purple'];
+        const who = PEOPLE[hash(obs.x + ',' + obs.y) % PEOPLE.length];
+        const bob = Math.sin(now / halfBeat() * Math.PI + obs.x + obs.y) * 1.5;
+        shadow(ctx, ox, oy + ts * 0.4, ts, 0.9);
+        return fit(ctx, who, ox, oy - ts * 0.02 + bob, ts * 0.92);
+      }
+      return false;
+    }
+    return { skin, drawTile, drawDoor, drawCoin, drawFloorItem, drawPlayer, drawRaver, drawObstacle };
+  })();
+
+  function render(now) {
+    const w = canvas.width / window.devicePixelRatio;
+    const h = canvas.height / window.devicePixelRatio;
+
+    const beatDuration = (60 / config.bpm) * 1000;
+    const elapsed = now - state.lastBeatTime;
+    const phase = (elapsed % beatDuration) / beatDuration;
+    const beatPulse = Math.pow(1 - phase, 2.2);
+
+    state.player.vx += (state.player.x - state.player.vx) * 0.32;
+    state.player.vy += (state.player.y - state.player.vy) * 0.32;
+    state.player.nudgeX *= 0.72;
+    state.player.nudgeY *= 0.72;
+    state.anchorSquash *= 0.82;
+    state.beatFlash *= 0.86;
+
+    for (const obs of state.obstacles) {
+      obs.vx += (obs.x - obs.vx) * 0.32;
+      obs.vy += (obs.y - obs.vy) * 0.32;
+    }
+    for (const lr of state.lostRavers) {
+      lr.vx += (lr.x - lr.vx) * 0.32;
+      lr.vy += (lr.y - lr.vy) * 0.32;
+    }
+
+    ctx.save();
+    ctx.fillStyle = state.dropTimer > 0 ? '#0c061c' : '#06050e';
+    ctx.fillRect(0, 0, w, h);
+
+    if (state.shake > 0.1) {
+      const sx = (Math.random() - 0.5) * state.shake;
+      const sy = (Math.random() - 0.5) * state.shake;
+      ctx.translate(sx, sy);
+      state.shake *= 0.85;
+    }
+
+    const laserAngle = Math.sin(now * 0.0012) * 0.6;
+    const grad1 = ctx.createLinearGradient(w * 0.2, 0, w * 0.8 + Math.sin(laserAngle) * 150, h);
+    grad1.addColorStop(0, state.dropTimer > 0 ? 'rgba(254, 228, 64, 0.11)' : 'rgba(255, 42, 133, 0.08)');
+    grad1.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = grad1;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.15, 0);
+    ctx.lineTo(w * 0.35, 0);
+    ctx.lineTo(w * 0.95, h);
+    ctx.lineTo(w * 0.45, h);
+    ctx.closePath();
+    ctx.fill();
+
+    const ts = config.tileSize;
+    const camX = w / 2 - (state.player.vx + 0.5) * ts;
+    const camY = h / 2 - (state.player.vy + 0.5) * ts;
+    ctx.translate(camX, camY);
+
+    const size = config.gridSize;
+    for (let gx = 0; gx < size; gx++) {
+      for (let gy = 0; gy < size; gy++) {
+        const tileType = state.tiles[gy]?.[gx] || 'normal';
+        const isEven = (gx + gy + state.beatIndex) % 2 === 0;
+        if (SPR.drawTile(ctx, tileType, gx, gy, ts, isEven, beatPulse)) continue;
+
+        if (tileType === 'wall') {
+          ctx.fillStyle = '#120a24';
+          ctx.fillRect(gx * ts, gy * ts, ts, ts);
+          ctx.strokeStyle = 'rgba(168, 85, 247, 0.35)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(gx * ts + 1.5, gy * ts + 1.5, ts - 3, ts - 3);
+          continue;
+        }
+
+        if (tileType === 'sticky') {
+          ctx.fillStyle = isEven ? 'rgba(126, 34, 206, 0.45)' : 'rgba(88, 28, 135, 0.45)';
+        } else if (tileType === 'slippery') {
+          ctx.fillStyle = isEven ? 'rgba(14, 165, 233, 0.28)' : 'rgba(2, 132, 199, 0.28)';
+        } else {
+          ctx.fillStyle = isEven
+            ? `rgba(26, 20, 48, ${0.55 + beatPulse * 0.2})`
+            : 'rgba(14, 11, 28, 0.75)';
+        }
+        ctx.fillRect(gx * ts + 2, gy * ts + 2, ts - 4, ts - 4);
+
+        if (tileType === 'sticky') {
+          ctx.strokeStyle = 'rgba(216, 180, 254, 0.45)';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(gx * ts + 6, gy * ts + 6, ts - 12, ts - 12);
+        } else if (tileType === 'slippery') {
+          ctx.strokeStyle = 'rgba(125, 211, 252, 0.55)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(gx * ts + 8, gy * ts + ts * 0.35);
+          ctx.lineTo(gx * ts + ts - 8, gy * ts + ts * 0.35);
+          ctx.moveTo(gx * ts + 12, gy * ts + ts * 0.68);
+          ctx.lineTo(gx * ts + ts - 12, gy * ts + ts * 0.68);
+          ctx.stroke();
+        }
+      }
+    }
+
+    ctx.strokeStyle = state.dropTimer > 0 ? '#fee440' : 'rgba(0, 245, 212, 0.45)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(0, 0, size * ts, size * ts);
+
+    state.groupTargets.forEach(g => {
+      const gx = (g.x + 0.5) * ts;
+      const gy = (g.y + 0.5) * ts;
+      ctx.beginPath();
+      ctx.arc(gx, gy, ts * 0.45, 0, Math.PI * 2);
+      ctx.strokeStyle = g.completed ? 'rgba(255,255,255,0.2)' : g.color;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    });
+
+    if (state.door) {
+      const dx = state.door.x * ts;
+      const dy = state.door.y * ts;
+      if (!SPR.drawDoor(ctx, dx, dy, ts, state.door)) {
+        ctx.fillStyle = state.door.unlocked ? 'rgba(0, 245, 212, 0.22)' : 'rgba(245, 158, 11, 0.85)';
+        ctx.fillRect(dx + 3, dy + 3, ts - 6, ts - 6);
+        ctx.strokeStyle = state.door.unlocked ? '#00f5d4' : '#fbbf24';
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(dx + 3, dy + 3, ts - 6, ts - 6);
+      }
+
+      if (!state.door.unlocked) {
+        ctx.fillStyle = '#05040a';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${state.door.progress}/5`, dx + ts / 2, dy + ts / 2);
+      }
+    }
+
+    for (let i = state.shockwaves.length - 1; i >= 0; i--) {
+      const sw = state.shockwaves[i];
+      sw.radius += 0.09;
+      sw.alpha -= 0.035;
+      if (sw.alpha <= 0) {
+        state.shockwaves.splice(i, 1);
+        continue;
+      }
+      ctx.beginPath();
+      ctx.arc((sw.x + 0.5) * ts, (sw.y + 0.5) * ts, sw.radius * ts, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(155, 93, 229, ${sw.alpha})`;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    state.collectibles.forEach(c => {
+      const cx = (c.x + 0.5) * ts;
+      const cy = (c.y + 0.5) * ts;
+      if (SPR.drawCoin(ctx, cx, cy, ts, beatPulse)) return;
+      const r = ts * (0.24 + beatPulse * 0.06);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = '#fee440';
+      ctx.shadowColor = '#fee440';
+      ctx.shadowBlur = 14;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 0.35, 0, Math.PI * 2);
+      ctx.fillStyle = '#06050e';
+      ctx.fill();
+    });
+
+    state.obstacles.forEach(obs => {
+      const ox = (obs.vx + 0.5) * ts;
+      const oy = (obs.vy + 0.5) * ts;
+
+      if (SPR.drawObstacle(ctx, obs, ox, oy, ts, beatPulse, now)) return;
+
+      if (obs.type === 'group_mate') {
+        const r = ts * (0.33 + beatPulse * 0.05);
+        ctx.beginPath();
+        ctx.arc(ox, oy, r, 0, Math.PI * 2);
+        ctx.fillStyle = obs.color;
+        ctx.shadowColor = obs.color;
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      } else if (obs.type === 'subwoofer') {
+        const r = ts * (0.38 + beatPulse * 0.08);
+        ctx.beginPath();
+        ctx.arc(ox, oy, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#261447';
+        ctx.strokeStyle = '#9b5de5';
+        ctx.lineWidth = 3;
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(ox, oy, r * (0.45 + beatPulse * 0.2), 0, Math.PI * 2);
+        ctx.fillStyle = '#9b5de5';
+        ctx.fill();
+      } else if (obs.type === 'pillar') {
+        ctx.beginPath();
+        ctx.arc(ox, oy, ts * 0.36, 0, Math.PI * 2);
+        ctx.fillStyle = '#332d4f';
+        ctx.strokeStyle = '#6c6399';
+        ctx.lineWidth = 2;
+        ctx.fill();
+        ctx.stroke();
+      } else if (obs.type === 'bouncer') {
+        const r = ts * (0.37 + beatPulse * 0.04);
+        ctx.beginPath();
+        ctx.arc(ox, oy, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#ff2a85';
+        ctx.shadowColor = '#ff2a85';
+        ctx.shadowBlur = 12;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      } else if (obs.type === 'dasher') {
+        const r = ts * (0.33 + beatPulse * 0.05);
+        ctx.beginPath();
+        ctx.arc(ox, oy, r, 0, Math.PI * 2);
+        ctx.fillStyle = obs.charge ? '#ffffff' : '#ff7b00';
+        ctx.shadowColor = '#ff7b00';
+        ctx.shadowBlur = obs.charge ? 18 : 10;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      } else if (obs.type === 'dancer') {
+        const r = ts * (0.31 + beatPulse * 0.07);
+        ctx.beginPath();
+        ctx.arc(ox, oy, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#f15bb5';
+        ctx.fill();
+      } else if (obs.type === 'mirror') {
+        const r = ts * (0.34 + beatPulse * 0.06);
+        if (obs.isMirroring) {
+          ctx.beginPath();
+          ctx.arc(ox, oy, r + 6, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(125, 211, 252, 0.85)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 3]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        ctx.beginPath();
+        ctx.arc(ox, oy, r, 0, Math.PI * 2);
+        ctx.fillStyle = obs.isMirroring ? '#e0f2fe' : '#64748b';
+        ctx.strokeStyle = obs.isMirroring ? '#00f5d4' : '#94a3b8';
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = obs.isMirroring ? '#38bdf8' : 'transparent';
+        ctx.shadowBlur = obs.isMirroring ? 16 : 0;
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        ctx.beginPath();
+        ctx.moveTo(ox - r * 0.42, oy + r * 0.25);
+        ctx.lineTo(ox + r * 0.25, oy - r * 0.42);
+        ctx.strokeStyle = obs.isMirroring ? '#0284c7' : '#cbd5e1';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      } else if (obs.type === 'bar') {
+        ctx.fillStyle = '#7c2d12';
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 2;
+        ctx.fillRect(ox - ts * 0.44, oy - ts * 0.3, ts * 0.88, ts * 0.6);
+        ctx.strokeRect(ox - ts * 0.44, oy - ts * 0.3, ts * 0.88, ts * 0.6);
+        ctx.font = Math.round(ts * 0.38) + 'px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🍸', ox, oy);
+      } else if (obs.type === 'crowd') {
+        const subR = ts * (0.14 + beatPulse * 0.02);
+        const offsets = [
+          { dx: -subR * 0.95, dy: subR * 0.55 },
+          { dx: subR * 0.95, dy: subR * 0.55 },
+          { dx: 0, dy: -subR * 0.85 }
+        ];
+        offsets.forEach((o, i) => {
+          ctx.beginPath();
+          ctx.arc(ox + o.dx, oy + o.dy, subR, 0, Math.PI * 2);
+          ctx.fillStyle = i === 2 ? '#818cf8' : '#4f46e5';
+          ctx.strokeStyle = '#c7d2fe';
+          ctx.lineWidth = 1.2;
+          ctx.fill();
+          ctx.stroke();
+        });
+      } else if (obs.type === 'dj') {
+        const bw = ts * 0.78;
+        const bh = ts * 0.64;
+        ctx.fillStyle = '#581c87';
+        ctx.strokeStyle = '#fee440';
+        ctx.lineWidth = 2;
+        ctx.fillRect(ox - bw / 2, oy - bh / 2, bw, bh);
+        ctx.strokeRect(ox - bw / 2, oy - bh / 2, bw, bh);
+
+        ctx.beginPath();
+        ctx.arc(ox - bw * 0.24, oy + bh * 0.12, ts * (0.1 + beatPulse * 0.02), 0, Math.PI * 2);
+        ctx.arc(ox + bw * 0.24, oy + bh * 0.12, ts * (0.1 + beatPulse * 0.02), 0, Math.PI * 2);
+        ctx.fillStyle = '#00f5d4';
+        ctx.fill();
+
+        ctx.fillStyle = '#fee440';
+        ctx.font = `bold ${Math.max(8, Math.floor(ts * 0.22))}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('DJ', ox, oy - bh * 0.2);
+      } else if (obs.type === 'dj_bot') {
+        const bw = ts * 0.72;
+        const bh = ts * 0.72;
+        ctx.fillStyle = '#065f46';
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 2;
+        ctx.fillRect(ox - bw / 2, oy - bh / 2, bw, bh);
+        ctx.strokeRect(ox - bw / 2, oy - bh / 2, bw, bh);
+
+        ctx.fillStyle = '#ff2a85';
+        ctx.fillRect(ox - bw * 0.34, oy - bh * 0.18, bw * 0.68, bh * 0.24);
+      }
+    });
+
+    state.lostRavers.forEach(lr => {
+      const lx = (lr.vx + 0.5) * ts;
+      const ly = (lr.vy + 0.5) * ts;
+      const r = ts * (0.32 + beatPulse * 0.05);
+
+      if (lr.following) {
+        ctx.beginPath();
+        ctx.arc(lx, ly, r + 6, 0, Math.PI * 2);
+        ctx.strokeStyle = '#00f5d4';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      if (SPR.drawRaver(ctx, lr.color, lx, ly, ts, beatPulse, now)) return;
+
+      ctx.beginPath();
+      ctx.arc(lx, ly, r, 0, Math.PI * 2);
+      ctx.fillStyle = lr.color;
+      ctx.shadowColor = lr.color;
+      ctx.shadowBlur = 12;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      ctx.beginPath();
+      ctx.arc(lx, ly, r * 0.35, 0, Math.PI * 2);
+      ctx.fillStyle = '#06050e';
+      ctx.fill();
+    });
+
+    const px = (state.player.vx + state.player.nudgeX + 0.5) * ts;
+    const py = (state.player.vy + state.player.nudgeY + 0.5) * ts;
+    const pr = ts * (0.35 + beatPulse * 0.06 + state.anchorSquash * 0.08);
+
+    if (state.isAnchored) {
+      ctx.beginPath();
+      ctx.arc(px, py, pr + 8, 0, Math.PI * 2);
+      ctx.strokeStyle = '#fee440';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([6, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    ctx.beginPath();
+    ctx.arc(px, py, pr + 4, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(0, 245, 212, ${0.25 + beatPulse * 0.35})`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    if (!SPR.drawPlayer(ctx, px, py, ts, beatPulse, now, state)) {
+    ctx.beginPath();
+    ctx.arc(px, py, pr, 0, Math.PI * 2);
+    ctx.fillStyle = state.isAnchored ? '#72efdd' : '#00f5d4';
+    ctx.shadowColor = state.isAnchored ? '#fee440' : '#00f5d4';
+    ctx.shadowBlur = 16;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    if (state.isAnchored) {
+      ctx.beginPath();
+      ctx.arc(px, py, pr * 0.38, 0, Math.PI * 2);
+      ctx.fillStyle = '#fee440';
+      ctx.fill();
+    }
+
+    }
+    ctx.restore();
+
+    const vig = ctx.createRadialGradient(w / 2, h / 2, w * 0.25, w / 2, h / 2, h * 0.65);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(3,2,8,0.72)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, w, h);
+
+    renderBeatBar(phase, beatPulse);
+    requestAnimationFrame(render);
+  }
+
+  function renderBeatBar(phase, beatPulse) {
+    const bw = beatCanvas.width / window.devicePixelRatio;
+    const bh = beatCanvas.height / window.devicePixelRatio;
+    if (bw <= 0 || bh <= 0) return;
+
+    bCtx.clearRect(0, 0, bw, bh);
+    const cx = bw / 2;
+    const cy = bh / 2;
+
+    if (state.beatFlash > 0.02) {
+      bCtx.fillStyle = `rgba(0, 245, 212, ${state.beatFlash * 0.14})`;
+      bCtx.fillRect(0, 0, bw, bh);
+    }
+
+    bCtx.strokeStyle = 'rgba(155, 93, 229, 0.35)';
+    bCtx.lineWidth = 2;
+    bCtx.beginPath();
+    bCtx.moveTo(18, cy);
+    bCtx.lineTo(bw - 18, cy);
+    bCtx.stroke();
+
+    const coreR = 14 + beatPulse * 6;
+    bCtx.beginPath();
+    bCtx.arc(cx, cy, coreR, 0, Math.PI * 2);
+    bCtx.fillStyle = `rgba(0, 245, 212, ${0.12 + beatPulse * 0.25})`;
+    bCtx.fill();
+    bCtx.strokeStyle = state.isAnchored ? '#fee440' : '#00f5d4';
+    bCtx.lineWidth = 3;
+    bCtx.stroke();
+
+    bCtx.beginPath();
+    bCtx.moveTo(cx, cy - 20);
+    bCtx.lineTo(cx, cy + 20);
+    bCtx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+    bCtx.lineWidth = 1.5;
+    bCtx.stroke();
+
+    const numBeats = 4;
+    const span = cx - 22;
+    for (let i = 0; i < numBeats; i++) {
+      const progress = (i + (1 - phase)) / numBeats;
+      const offset = progress * span;
+      const alpha = Math.max(0.2, 1 - progress * 0.78);
+      const isNext = i === 0;
+      const barW = isNext ? 6 : 4;
+      const barH = isNext ? 26 : 16;
+
+      bCtx.fillStyle = isNext
+        ? `rgba(0, 245, 212, ${alpha})`
+        : `rgba(255, 42, 133, ${alpha})`;
+
+      if (isNext) {
+        bCtx.shadowColor = '#00f5d4';
+        bCtx.shadowBlur = 10;
+      }
+
+      bCtx.beginPath();
+      bCtx.roundRect(cx - offset - barW / 2, cy - barH / 2, barW, barH, 3);
+      bCtx.fill();
+
+      bCtx.beginPath();
+      bCtx.roundRect(cx + offset - barW / 2, cy - barH / 2, barW, barH, 3);
+      bCtx.fill();
+
+      bCtx.shadowBlur = 0;
+    }
+  }
+
+  resize();
+  generateArena();
+  showScreen('start');
+  requestAnimationFrame(render);
+
+  // =========================================================================
+  // EXTENSIÓN DE MECÁNICAS (SIN ALTERAR NI BORRAR LÍNEAS ORIGINALES)
+  // =========================================================================
+  const necroState = {
+    lives: 3,
+    hasMovedOnce: false,
+    slots: {
+      shades: null,     // { name: 'Shades', shield: 2 }
+      consumable: null, // { name: 'Cigarros', type: 'cigarettes' }
+      special: null     // { name: 'Drop', type: 'drop_item' }
+    },
+    floorItems: [],     // { x, y, type: 'shades' | 'cigarettes' | 'drop_item', phase }
+    doubleStepTurns: 0,
+    npcFreezeTurns: 0,
+    lastHitCause: '',
+    heldKeys: new Set(),
+    comboTriggered: false
+  };
+
+  const necroHudRow = document.getElementById('necroHudRow');
+  const heartsPanel = document.getElementById('heartsPanel');
+  const slotShadesEl = document.getElementById('slotShades');
+  const slotConsumableEl = document.getElementById('slotConsumable');
+  const slotSpecialEl = document.getElementById('slotSpecial');
+  const slotShadesIcon = document.getElementById('slotShadesIcon');
+  const slotShadesSub = document.getElementById('slotShadesSub');
+  const slotConsumableIcon = document.getElementById('slotConsumableIcon');
+  const slotConsumableSub = document.getElementById('slotConsumableSub');
+  const slotSpecialIcon = document.getElementById('slotSpecialIcon');
+  const slotSpecialSub = document.getElementById('slotSpecialSub');
+  const mobileItemActions = document.getElementById('mobileItemActions');
+  const btnUseConsumableMobile = document.getElementById('btnUseConsumableMobile');
+  const btnUseSpecialMobile = document.getElementById('btnUseSpecialMobile');
+  const doubleStepBadge = document.getElementById('doubleStepBadge');
+  const freezeNpcBadge = document.getElementById('freezeNpcBadge');
+
+  function renderNecroHud() {
+    if (!heartsPanel) return;
+
+    // Renderizar corazones (sin límite superior) + escudos de Shades
+    let heartsHtml = '';
+    const displaySlots = Math.max(3, necroState.lives);
+    for (let i = 0; i < displaySlots; i++) {
+      if (i < necroState.lives) {
+        heartsHtml += '<span class="heart-unit">❤️</span>';
+      } else {
+        heartsHtml += '<span class="heart-unit empty">🖤</span>';
+      }
+    }
+    if (necroState.slots.shades && necroState.slots.shades.shield > 0) {
+      for (let s = 0; s < necroState.slots.shades.shield; s++) {
+        heartsHtml += '<span class="shield-unit">🕶️</span>';
+      }
+    }
+    heartsPanel.innerHTML = heartsHtml;
+
+    // Slot 1: Shades
+    if (necroState.slots.shades && necroState.slots.shades.shield > 0) {
+      slotShadesEl.classList.add('has-item');
+      slotShadesIcon.textContent = '🕶️';
+      slotShadesSub.textContent = `Escudo ${necroState.slots.shades.shield}/2`;
+    } else {
+      slotShadesEl.classList.remove('has-item');
+      slotShadesIcon.textContent = '·';
+      slotShadesSub.textContent = 'Vacío';
+    }
+
+    // Slot 2: Consumable
+    if (necroState.slots.consumable) {
+      slotConsumableEl.classList.add('has-item');
+      slotConsumableIcon.textContent = '🚬';
+      slotConsumableSub.textContent = 'W+S / ▲+▼';
+      btnUseConsumableMobile.classList.remove('hidden');
+    } else {
+      slotConsumableEl.classList.remove('has-item');
+      slotConsumableIcon.textContent = '·';
+      slotConsumableSub.textContent = 'Vacío';
+      btnUseConsumableMobile.classList.add('hidden');
+    }
+
+    // Slot 3: Special
+    if (necroState.slots.special) {
+      slotSpecialEl.classList.add('has-item');
+      slotSpecialIcon.textContent = '🎛️';
+      slotSpecialSub.textContent = 'A+D / ◀+▶';
+      btnUseSpecialMobile.classList.remove('hidden');
+    } else {
+      slotSpecialEl.classList.remove('has-item');
+      slotSpecialIcon.textContent = '·';
+      slotSpecialSub.textContent = 'Vacío';
+      btnUseSpecialMobile.classList.add('hidden');
+    }
+
+    // Banners de buffs activos
+    if (necroState.doubleStepTurns > 0) {
+      doubleStepBadge.classList.remove('hidden');
+      doubleStepBadge.textContent = `🚬 PASO DOBLE: ${necroState.doubleStepTurns} TURNOS`;
+    } else {
+      doubleStepBadge.classList.add('hidden');
+    }
+
+    if (necroState.npcFreezeTurns > 0) {
+      freezeNpcBadge.classList.remove('hidden');
+      freezeNpcBadge.textContent = `🎛 DROP FREEZE: ${necroState.npcFreezeTurns} TURNOS`;
+    } else {
+      freezeNpcBadge.classList.add('hidden');
+    }
+  }
+
+  function spawnFloorItemsForArena() {
+    necroState.floorItems = [];
+    if (state.mapMode !== 'procedural' && state.mapItems && state.mapItems.length) {
+      state.mapItems.forEach(it => necroState.floorItems.push({ x: it.x, y: it.y, type: it.type, phase: Math.random() * Math.PI * 2 }));
+      return;
+    }
+    const size = config.gridSize;
+    const itemTypes = ['shades', 'cigarettes', 'drop_item'];
+
+    for (const type of itemTypes) {
+      for (let attempt = 0; attempt < 200; attempt++) {
+        const rx = 1 + Math.floor(Math.random() * (size - 2));
+        const ry = 1 + Math.floor(Math.random() * (size - 2));
+        if (rx === state.player.x && ry === state.player.y) continue;
+      if (state.tiles[ry]?.[rx] === 'wall') continue;
+        if (state.door && state.door.x === rx && state.door.y === ry) continue;
+        if (state.obstacles.some(o => o.x === rx && o.y === ry)) continue;
+        if (state.lostRavers.some(r => r.x === rx && r.y === ry)) continue;
+        if (state.collectibles.some(c => c.x === rx && c.y === ry)) continue;
+        if (necroState.floorItems.some(fi => fi.x === rx && fi.y === ry)) continue;
+
+        necroState.floorItems.push({
+          x: rx,
+          y: ry,
+          type,
+          phase: Math.random() * Math.PI * 2
+        });
+        break;
+      }
+    }
+  }
+
+  function checkFloorItemsPickup() {
+    const idx = necroState.floorItems.findIndex(fi => fi.x === state.player.x && fi.y === state.player.y);
+    if (idx === -1) return;
+
+    const item = necroState.floorItems[idx];
+    necroState.floorItems.splice(idx, 1);
+
+    if (item.type === 'shades') {
+      necroState.slots.shades = { name: 'Shades', shield: 2 };
+      audio.playSfx('pickup');
+      showFeedback('🕶️ SHADES EQUIPADAS (+2 ESCUDO)', '#38bdf8');
+    } else if (item.type === 'cigarettes') {
+      necroState.slots.consumable = { name: 'Cigarros', type: 'cigarettes' };
+      audio.playSfx('pickup');
+      showFeedback('🚬 CAJA DE CIGARROS (W+S / BOTÓN)', '#fb923c');
+    } else if (item.type === 'drop_item') {
+      necroState.slots.special = { name: 'Drop', type: 'drop_item' };
+      audio.playSfx('pickup');
+      showFeedback('🎛️ ITEM DROP LISTO (A+D / BOTÓN)', '#fee440');
+    }
+    renderNecroHud();
+  }
+
+  function damagePlayer(reason, isMissedBeat = false) {
+    if (state.screen !== 'playing') return;
+
+    // Si aún no empieza a moverse en la partida, los missed beats no quitan vida
+    if (isMissedBeat && !necroState.hasMovedOnce) {
+      return;
+    }
+    window.__hurtUntil = performance.now() + 450; // animación 'hurt' del sprite
+
+    // 1) Absorber con Shades primero si hay escudo
+    if (necroState.slots.shades && necroState.slots.shades.shield > 0) {
+      necroState.slots.shades.shield -= 1;
+      state.shake = 9;
+      audio.playSfx('miss');
+      if (necroState.slots.shades.shield <= 0) {
+        necroState.slots.shades = null;
+        showFeedback('🕶️ ¡SHADES ROTAS! (ESCUDO AGOTADO)', '#38bdf8');
+      } else {
+        showFeedback(`🕶️ ESCUDO ABSORBIÓ EL GOLPE (${necroState.slots.shades.shield}/2)`, '#38bdf8');
+      }
+      renderNecroHud();
+      return;
+    }
+
+    // 2) Restar 1 corazón
+    necroState.lives = Math.max(0, necroState.lives - 1);
+    state.shake = 12;
+    audio.playSfx('miss');
+    renderNecroHud();
+
+    if (necroState.lives <= 0) {
+      _origTriggerGameOver(reason);
+    } else {
+      showFeedback(`💔 -1 VIDA (${necroState.lives} RESTANTES)`, '#ff2a85');
+    }
+  }
+
+  function setNpcBlinkState(obs, seconds = 10) {
+    obs.blinkUntil = performance.now() + seconds * 1000;
+  }
+
+  function isNpcBlinking(obs) {
+    return obs && obs.blinkUntil && performance.now() < obs.blinkUntil;
+  }
+
+  function activateConsumableItem() {
+    if (state.screen !== 'playing' || !necroState.slots.consumable) return false;
+    if (necroState.slots.consumable.type === 'cigarettes') {
+      necroState.slots.consumable = null;
+      necroState.doubleStepTurns = 5;
+      audio.playSfx('pickup');
+      showFeedback('🚬 ¡CIGARROS! PASOS DOBLES x5 TURNOS', '#fb923c');
+      renderNecroHud();
+      return true;
+    }
+    return false;
+  }
+
+  function activateSpecialItem() {
+    if (state.screen !== 'playing' || !necroState.slots.special) return false;
+    if (necroState.slots.special.type === 'drop_item') {
+      necroState.slots.special = null;
+      state.dropTimer = 12;
+      necroState.npcFreezeTurns = 4;
+      state.shake = 14;
+      audio.playSfx('door_open');
+      showFeedback('🎛️ ¡DROP! NPCs CONGELADOS 4 TURNOS', '#fee440');
+      renderNecroHud();
+      return true;
+    }
+    return false;
+  }
+
+  // Envolver generateArena para spawnear ítems en suelo
+  const _origGenerateArena = generateArena;
+  generateArena = function() {
+    _origGenerateArena();
+    spawnFloorItemsForArena();
+    renderNecroHud();
+  };
+
+  // Envolver startGameWithMode para reiniciar vidas, slots y estados
+  const _origStartGameWithMode = startGameWithMode;
+  startGameWithMode = function(mode) {
+    necroState.lives = 3;
+    necroState.hasMovedOnce = false;
+    necroState.slots.shades = null;
+    necroState.slots.consumable = null;
+    necroState.slots.special = null;
+    necroState.doubleStepTurns = 0;
+    necroState.npcFreezeTurns = 0;
+    necroState.lastHitCause = '';
+    _origStartGameWithMode(mode);
+    renderNecroHud();
+  };
+
+  // Envolver showScreen para mostrar/ocultar el nuevo HUD y botones móviles
+  const _origShowScreen = showScreen;
+  showScreen = function(name) {
+    _origShowScreen(name);
+    if (name === 'playing') {
+      necroHudRow.classList.remove('hidden');
+      mobileItemActions.classList.remove('hidden');
+      renderNecroHud();
+    } else {
+      necroHudRow.classList.add('hidden');
+      mobileItemActions.classList.add('hidden');
+    }
+  };
+
+  // Envolver checkCollectibles para que cada Vinyl sume +1 corazón directamente (sin límite)
+  const _origCheckCollectibles = checkCollectibles;
+  checkCollectibles = function() {
+    const hadVinyl = state.collectibles.some(c => c.x === state.player.x && c.y === state.player.y);
+    _origCheckCollectibles();
+    if (hadVinyl) {
+      necroState.lives += 1;
+      renderNecroHud();
+      showFeedback('VINYL +1 ❤️ VIDA EXTRA!', '#fee440');
+    }
+    checkFloorItemsPickup();
+  };
+
+  // Envolver triggerGameOver para interceptar choques con NPCs:
+  // Ningún NPC puede matar instantáneamente; solo resta 1 vida (o escudo) y queda intocable 10s.
+  const _origTriggerGameOver = triggerGameOver;
+  triggerGameOver = function(reason) {
+    // Buscar NPC implicado (en la casilla del jugador o adyacente)
+    let offender = state.obstacles.find(o => o.x === state.player.x && o.y === state.player.y);
+    if (!offender) {
+      offender = state.obstacles.find(o =>
+        ['bouncer', 'dj_bot', 'dasher', 'dancer', 'mirror'].includes(o.type) &&
+        Math.abs(o.x - state.player.x) + Math.abs(o.y - state.player.y) <= 1
+      );
+    }
+
+    if (offender && isNpcBlinking(offender)) {
+      return;
+    }
+
+    if (offender) {
+      setNpcBlinkState(offender, 10);
+    }
+    damagePlayer(reason, false);
+  };
+
+  // Envolver onBeatTick para:
+  // 1) Detectar missed beat pasivo (no moverse en el beat una vez iniciada la partida)
+  // 2) Congelar movimiento de NPCs mientras npcFreezeTurns > 0
+  // 3) Evitar que NPCs en modo parpadeo (intocables 10s) golpeen al jugador
+  const _origOnBeatTick = onBeatTick;
+  onBeatTick = function() {
+    if (state.screen !== 'playing') return;
+
+    const missedPassiveBeat = (state.beatIndex > 0 && !state.playerMovedThisBeat && necroState.hasMovedOnce);
+
+    // Guardar posiciones y dirs previos por si están congelados o parpadeando
+    const prevObsSnapshot = state.obstacles.map(o => ({
+      ref: o,
+      x: o.x,
+      y: o.y,
+      dirX: o.dir ? o.dir.x : 0,
+      dirY: o.dir ? o.dir.y : 0,
+      charge: o.charge
+    }));
+
+    const wasFrozen = necroState.npcFreezeTurns > 0;
+    if (wasFrozen) {
+      necroState.npcFreezeTurns--;
+    }
+
+    _origOnBeatTick();
+
+    // Si había Freeze activo, restaurar posiciones de NPCs móviles para que se queden quietos
+    if (wasFrozen) {
+      for (const snap of prevObsSnapshot) {
+        if (['bouncer', 'dj_bot', 'dasher', 'dancer'].includes(snap.ref.type)) {
+          snap.ref.x = snap.x;
+          snap.ref.y = snap.y;
+          snap.ref.dir.x = snap.dirX;
+          snap.ref.dir.y = snap.dirY;
+          snap.ref.charge = snap.charge;
+        }
+      }
+    } else {
+      // Si un NPC estaba en modo parpadeo (10s intocable) y se movió encima del jugador, revertir su paso
+      for (const snap of prevObsSnapshot) {
+        if (isNpcBlinking(snap.ref) && snap.ref.x === state.player.x && snap.ref.y === state.player.y) {
+          snap.ref.x = snap.x;
+          snap.ref.y = snap.y;
+        }
+      }
+    }
+
+    if (missedPassiveBeat && state.screen === 'playing') {
+      damagePlayer('Perdiste el ritmo demasiadas veces (Missed Beat).', true);
+    }
+
+    renderNecroHud();
+  };
+
+  // Envolver toggleAnchor para contar primer movimiento y penalizar missed beat activo
+  const _origToggleAnchor = toggleAnchor;
+  toggleAnchor = function() {
+    if (state.screen !== 'playing') return;
+    const timing = checkBeatWindow();
+    if (!timing.onBeat) {
+      _origToggleAnchor();
+      if (necroState.hasMovedOnce) {
+        damagePlayer('Perdiste el ritmo al clavarte (Missed Beat).', true);
+      }
+      return;
+    }
+    necroState.hasMovedOnce = true;
+    _origToggleAnchor();
+  };
+
+  // Envolver tryMovePlayer para:
+  // 1) Penalizar missed beat activo si ya empezó a moverse
+  // 2) Ejecutar paso doble (2 casillas) cuando Cigarros está activo, deteniéndose ante obstáculos/muros y aplicando pisos
+  // 3) Evitar daño al pasar junto/sobre NPCs en modo parpadeo (intocables)
+  const _origTryMovePlayer = tryMovePlayer;
+  tryMovePlayer = function(dx, dy) {
+    if (state.screen !== 'playing') return;
+
+    const timing = checkBeatWindow();
+    if (!timing.onBeat) {
+      _origTryMovePlayer(dx, dy);
+      if (necroState.hasMovedOnce) {
+        damagePlayer('Perdiste el ritmo en la pista (Missed Beat).', true);
+      }
+      return;
+    }
+
+    necroState.hasMovedOnce = true;
+
+    // Si NO hay paso doble activo o el jugador está clavado, usar comportamiento original + recoger ítems de suelo
+    if (necroState.doubleStepTurns <= 0 || state.isAnchored) {
+      _origTryMovePlayer(dx, dy);
+      checkFloorItemsPickup();
+      renderNecroHud();
+      return;
+    }
+
+    // === LÓGICA DE PASO DOBLE (CIGARROS) ===
+    // Paso 1: ejecutar movimiento normal
+    const startX = state.player.x;
+    const startY = state.player.y;
+    _origTryMovePlayer(dx, dy);
+
+    if (state.screen !== 'playing') return;
+
+    // Consumir 1 turno del buff de cigarros
+    necroState.doubleStepTurns = Math.max(0, necroState.doubleStepTurns - 1);
+
+    // Si el jugador efectivamente avanzó en el paso 1 (no estaba pegado ni bloqueado), intentar el 2do paso en la misma dirección
+    const movedFirstStep = (state.player.x !== startX || state.player.y !== startY);
+    if (movedFirstStep) {
+      const size = config.gridSize;
+      const nx2 = state.player.x + dx;
+      const ny2 = state.player.y + dy;
+
+      const blockedByWall = (nx2 < 0 || ny2 < 0 || nx2 >= size || ny2 >= size || state.tiles[ny2]?.[nx2] === 'wall');
+      const blockedByDoor = (state.door && !state.door.unlocked && state.door.x === nx2 && state.door.y === ny2);
+      const obsAt2 = state.obstacles.find(o => o.x === nx2 && o.y === ny2);
+      const blockedBySolidObs = obsAt2 && ['pillar', 'subwoofer', 'group_mate', 'crowd', 'dj', 'bar'].includes(obsAt2.type);
+
+      if (!blockedByWall && !blockedByDoor && !blockedBySolidObs) {
+        // Si hay un NPC móvil/espejo en la 2da casilla:
+        if (obsAt2) {
+          if (!isNpcBlinking(obsAt2)) {
+            setNpcBlinkState(obsAt2, 10);
+            damagePlayer('Chocaste en pleno paso doble.', false);
+          }
+        } else {
+          const prev2X = state.player.x;
+          const prev2Y = state.player.y;
+          state.player.x = nx2;
+          state.player.y = ny2;
+
+          // Aplicar mecánicas de piso en la 2da casilla
+          const tile2 = state.tiles[ny2]?.[nx2] || 'normal';
+          if (tile2 === 'slippery') {
+            const sx = nx2 + dx;
+            const sy = ny2 + dy;
+            const doorClosedAhead = state.door && !state.door.unlocked && state.door.x === sx && state.door.y === sy;
+            const obsAhead = state.obstacles.some(o => o.x === sx && o.y === sy) || state.tiles[sy]?.[sx] === 'wall';
+            if (sx >= 0 && sy >= 0 && sx < size && sy < size && !doorClosedAhead && !obsAhead) {
+              state.player.x = sx;
+              state.player.y = sy;
+              audio.playSfx('slip');
+              showFeedback('🚬🔵 DOBLE + ¡RESBALÓN!', '#38bdf8');
+            }
+          } else if (tile2 === 'sticky') {
+            audio.playSfx('sticky');
+            showFeedback('🚬🟣 DOBLE + PISO PEGAJOSO', '#c084fc');
+          } else {
+            showFeedback(`🚬 ¡PASO DOBLE! (${necroState.doubleStepTurns} REST.)`, '#fb923c');
+          }
+
+          const d2x = state.player.x - prev2X;
+          const d2y = state.player.y - prev2Y;
+          if (d2x !== 0 || d2y !== 0) {
+            updateMirrorNPCs(d2x, d2y);
+          }
+          updateLostRavers();
+          checkCollectibles();
+          updateDoorUI();
+        }
+      }
+    }
+
+    checkFloorItemsPickup();
+    renderNecroHud();
+  };
+
+  // Envolver updateMirrorNPCs para respetar NPC Espejo en modo parpadeo (intocable) y Freeze
+  const _origUpdateMirrorNPCs = updateMirrorNPCs;
+  updateMirrorNPCs = function(playerDx, playerDy) {
+    if (necroState.npcFreezeTurns > 0) return false;
+    return _origUpdateMirrorNPCs(playerDx, playerDy);
+  };
+
+  // Envolver render para dibujar los ítems en el suelo y el parpadeo de NPCs intocables (10s)
+  const _origRender = render;
+  render = function(now) {
+    _origRender(now);
+
+    if (state.screen !== 'playing' && state.screen !== 'paused') return;
+
+    const w = canvas.width / window.devicePixelRatio;
+    const h = canvas.height / window.devicePixelRatio;
+    const ts = config.tileSize;
+    const camX = w / 2 - (state.player.vx + 0.5) * ts;
+    const camY = h / 2 - (state.player.vy + 0.5) * ts;
+
+    ctx.save();
+    ctx.translate(camX, camY);
+
+    // 1) Dibujar ítems recogibles en el suelo (Shades, Cigarros, Drop)
+    for (const fi of necroState.floorItems) {
+      const fx = (fi.x + 0.5) * ts;
+      const fy = (fi.y + 0.5) * ts;
+      const bob = Math.sin(now * 0.006 + fi.phase) * 3;
+      if (SPR.drawFloorItem(ctx, fi, fx, fy + bob, ts)) continue;
+
+      ctx.beginPath();
+      ctx.arc(fx, fy + bob, ts * 0.34, 0, Math.PI * 2);
+      if (fi.type === 'shades') {
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
+        ctx.strokeStyle = '#38bdf8';
+      } else if (fi.type === 'cigarettes') {
+        ctx.fillStyle = 'rgba(251, 146, 60, 0.25)';
+        ctx.strokeStyle = '#fb923c';
+      } else {
+        ctx.fillStyle = 'rgba(254, 228, 64, 0.28)';
+        ctx.strokeStyle = '#fee440';
+      }
+      ctx.lineWidth = 2;
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.font = `${Math.max(14, Math.floor(ts * 0.44))}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const emoji = fi.type === 'shades' ? '🕶️' : (fi.type === 'cigarettes' ? '🚬' : '🎛️');
+      ctx.fillText(emoji, fx, fy + bob);
+    }
+
+    // 2) Indicador visual de parpadeo (intocable 10s) y congelamiento de NPCs
+    const blinkOn = Math.floor(now / 90) % 2 === 0;
+    for (const obs of state.obstacles) {
+      const ox = (obs.vx + 0.5) * ts;
+      const oy = (obs.vy + 0.5) * ts;
+
+      if (isNpcBlinking(obs)) {
+        ctx.beginPath();
+        ctx.arc(ox, oy, ts * 0.44, 0, Math.PI * 2);
+        ctx.strokeStyle = blinkOn ? '#ffffff' : 'rgba(0, 245, 212, 0.35)';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      if (necroState.npcFreezeTurns > 0 && ['bouncer', 'dj_bot', 'dasher', 'dancer', 'mirror'].includes(obs.type)) {
+        ctx.beginPath();
+        ctx.arc(ox, oy, ts * 0.42, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.85)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  };
+
+  // === COMBOS DE BOTONES EN PC Y BOTONES EN MÓVIL ===
+  function normalizeComboKey(e) {
+    const k = e.key.toLowerCase();
+    if (k === 'w' || e.key === 'ArrowUp') return 'UP';
+    if (k === 's' || e.key === 'ArrowDown') return 'DOWN';
+    if (k === 'a' || e.key === 'ArrowLeft') return 'LEFT';
+    if (k === 'd' || e.key === 'ArrowRight') return 'RIGHT';
+    return null;
+  }
+
+  // Listener en fase de captura para interceptar combos simultáneos (UP+DOWN = Consumable, LEFT+RIGHT = Special)
+  window.addEventListener('keydown', e => {
+    if (state.screen !== 'playing') return;
+    const dir = normalizeComboKey(e);
+    if (!dir) return;
+
+    necroState.heldKeys.add(dir);
+
+    // Combo UP + DOWN (W+S o ▲+▼) -> Activar Consumable (Cigarros)
+    if (necroState.heldKeys.has('UP') && necroState.heldKeys.has('DOWN')) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (!necroState.comboTriggered && activateConsumableItem()) {
+        necroState.comboTriggered = true;
+      }
+      return;
+    }
+
+    // Combo LEFT + RIGHT (A+D o ◀+▶) -> Activar Special (Drop)
+    if (necroState.heldKeys.has('LEFT') && necroState.heldKeys.has('RIGHT')) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (!necroState.comboTriggered && activateSpecialItem()) {
+        necroState.comboTriggered = true;
+      }
+      return;
+    }
+  }, true);
+
+  window.addEventListener('keyup', e => {
+    const dir = normalizeComboKey(e);
+    if (dir) {
+      necroState.heldKeys.delete(dir);
+    }
+    if (necroState.heldKeys.size === 0) {
+      necroState.comboTriggered = false;
+    }
+  }, true);
+
+  // Botones táctiles en móvil (al lado del PAD) y también clic directo en los slots
+  btnUseConsumableMobile.addEventListener('click', activateConsumableItem);
+  btnUseSpecialMobile.addEventListener('click', activateSpecialItem);
+  slotConsumableEl.addEventListener('click', activateConsumableItem);
+  slotSpecialEl.addEventListener('click', activateSpecialItem);
+
+  // Inicializar ítems en suelo para la primera arena generada
+  spawnFloorItemsForArena();
+  renderNecroHud();
+
+})();
+</script>
+</body>
+</html>
