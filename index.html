@@ -444,6 +444,12 @@
     height: 15px;
   }
 
+  #btnToggleHudControls.hud-toggle-active {
+    border-color: #00f5d4;
+    color: #00f5d4;
+    box-shadow: 0 0 10px rgba(0, 245, 212, 0.35);
+  }
+
   /* === NUEVOS ESTILOS: HUD NECRODANCER (CORAZONES + 3 SLOTS + BOTONES MÓVILES) === */
   #statusBanners {
     top: 128px;
@@ -694,6 +700,7 @@
       </div>
     </div>
     <div class="hud-group">
+      <button id="btnToggleHudControls" class="icon-btn" type="button" title="Activar/Desactivar controles del HUD" aria-pressed="false">HUD OFF</button>
       <button id="btnTogglePad" class="icon-btn" type="button" title="Mostrar/Ocultar Cruceta">PAD</button>
       <button id="btnOpenSettingsHud" class="icon-btn" type="button">⚙</button>
     </div>
@@ -969,7 +976,7 @@
     shockwaves: [],
     shake: 0,
     dropTimer: 0,
-    showDpad: true,
+    showDpad: false,
     beatFlash: 0,
     clubMeta: null
   };
@@ -2447,19 +2454,32 @@ function generateArena() {
 
   let touchStartX = 0;
   let touchStartY = 0;
+  let touchStartTime = 0;
 
   canvas.addEventListener('touchstart', e => {
     if (e.touches.length > 0) {
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
+      touchStartTime = performance.now();
     }
   }, { passive: true });
 
   canvas.addEventListener('touchend', e => {
     if (state.screen !== 'playing' || e.changedTouches.length === 0) return;
+    if (config.padTarget) return;
     const dx = e.changedTouches[0].clientX - touchStartX;
     const dy = e.changedTouches[0].clientY - touchStartY;
-    if (Math.max(Math.abs(dx), Math.abs(dy)) < 22) return;
+    const dist = Math.max(Math.abs(dx), Math.abs(dy));
+    const dt = performance.now() - touchStartTime;
+
+    // Tap corto -> cuenta como STEP
+    if (dist < 22) {
+      if (dt < 340 && typeof stepDance === 'function') {
+        stepDance();
+      }
+      return;
+    }
+
     if (Math.abs(dx) > Math.abs(dy)) {
       tryMovePlayer(dx > 0 ? 1 : -1, 0);
     } else {
@@ -3520,6 +3540,40 @@ function generateArena() {
   const btnUseSpecialMobile = document.getElementById('btnUseSpecialMobile');
   const doubleStepBadge = document.getElementById('doubleStepBadge');
   const freezeNpcBadge = document.getElementById('freezeNpcBadge');
+  const btnToggleHudControls = document.getElementById('btnToggleHudControls');
+  let hudControlsEnabled = false;
+
+  function applyHudControlsVisibility() {
+    const show = state.screen === 'playing' && hudControlsEnabled;
+    necroHudRow.classList.toggle('hidden', !show);
+    mobileItemActions.classList.toggle('hidden', !show);
+    if (!hudControlsEnabled) {
+      state.showDpad = false;
+      dpad.classList.add('hidden');
+    } else if (state.screen === 'playing' && state.showDpad && !config.padTarget) {
+      dpad.classList.remove('hidden');
+    }
+    if (btnToggleHudControls) {
+      btnToggleHudControls.textContent = hudControlsEnabled ? 'HUD ON' : 'HUD OFF';
+      btnToggleHudControls.classList.toggle('hud-toggle-active', hudControlsEnabled);
+      btnToggleHudControls.setAttribute('aria-pressed', hudControlsEnabled ? 'true' : 'false');
+    }
+  }
+
+  function setHudControlsEnabled(enabled) {
+    hudControlsEnabled = !!enabled;
+    state.showDpad = hudControlsEnabled;
+    applyHudControlsVisibility();
+    if (hudControlsEnabled && state.screen === 'playing') {
+      renderNecroHud();
+    }
+  }
+
+  if (btnToggleHudControls) {
+    btnToggleHudControls.addEventListener('click', () => {
+      setHudControlsEnabled(!hudControlsEnabled);
+    });
+  }
 
   function renderNecroHud() {
     if (!heartsPanel) return;
@@ -3807,6 +3861,7 @@ function generateArena() {
     necroState.offBeatExtraUsedThisBeat = false;
     necroState.npcFreezeTurns = 0;
     necroState.lastHitCause = '';
+    setHudControlsEnabled(false);
     _origStartGameWithMode(mode);
     renderNecroHud();
   };
@@ -3816,8 +3871,7 @@ function generateArena() {
   showScreen = function(name) {
     _origShowScreen(name);
     if (name === 'playing') {
-      necroHudRow.classList.remove('hidden');
-      mobileItemActions.classList.remove('hidden');
+      applyHudControlsVisibility();
       renderNecroHud();
     } else {
       necroHudRow.classList.add('hidden');
@@ -5230,6 +5284,7 @@ function generateArena() {
 
   // Inicializar ítems en suelo para la primera arena generada
   spawnFloorItemsForArena();
+  setHudControlsEnabled(false);
   renderNecroHud();
   crowdSpawnCigarettes();
 
