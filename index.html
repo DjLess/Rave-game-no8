@@ -669,6 +669,8 @@
 
   /* Los botones de ítems estaban donde ahora va el pad izquierdo: se suben sobre él */
   #mobileItemActions { bottom: 248px; }
+  /* Modo pad de casilla destino: se ocultan las cruces y el botón STEP */
+  body.pad-target #dpad, body.pad-target #dpadLeft, body.pad-target #btnStep { display: none !important; }
 </style>
 </head>
 <body>
@@ -870,6 +872,17 @@
       </div>
     </div>
 
+    <div class="settings-card">
+      <div class="setting-header"><span>Controles</span></div>
+      <div class="check-grid">
+        <label class="check-label"><input id="chkHaptics" type="checkbox"> <span id="lblHaptics">📳 Vibración háptica</span></label>
+        <label class="check-label"><input id="chkPadTarget" type="checkbox"> 🎯 Pad de casilla destino</label>
+      </div>
+      <div style="font-size:11px;line-height:1.4;color:#9ca3af;margin-top:8px">
+        Pad de casilla destino: reemplaza las cruces. Toca una casilla marcada junto a tu personaje para moverte; toca a tu personaje para hacer STEP (mantén para clavarte / desclavarte).
+      </div>
+    </div>
+
     <button id="btnApplySettings" class="btn-primary" type="button">✓ Aplicar y Regenerar Pista</button>
     <button id="btnResetDefaults" class="btn-secondary" type="button">↺ Restaurar Valores por Defecto</button>
     <button id="btnCloseSettings" class="btn-secondary" style="border-color:#666;color:#ccc;background:transparent" type="button">Cerrar</button>
@@ -888,6 +901,8 @@
     gridSize: 19,
     obstacleCount: 14,
     minDistance: 2,
+    haptics: false,
+    padTarget: false,
     types: {
       subwoofer: true,
       dancer: true,
@@ -2587,7 +2602,7 @@ function generateArena() {
       if (t === 'group_mate') return drawRaver(ctx, obs.color, ox, oy, ts, pulse, now);
       if (ENEMY[t]) {
         if (!sheets.enemies || !ok(sheets.enemies.img)) return false;
-        shadow(ctx, ox, base - ts * 0.02, ts, 1.05);
+        shadow(ctx, ox, base - ts * 0.02, ts, 1.05 * (obs.turbo ? 2 : 1));
         let glow = null, blur = 10, alpha = 1, flip = false;
         if (t === 'dasher') { glow = obs.charge ? '#ffffff' : '#ff7b00'; blur = obs.charge ? 20 : 8; }
         if (t === 'bouncer') { glow = '#ff2a85'; blur = 8; }
@@ -2599,6 +2614,33 @@ function generateArena() {
             ctx.strokeStyle = 'rgba(125, 211, 252, 0.85)'; ctx.lineWidth = 2;
             ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
           } else alpha = 0.7;
+        }
+        if (obs.turbo) {
+          // DANCER TURBO: doble de tamaño, cuerpo con otro tono y aura dorada
+          const K = 2, hasFilter = ('filter' in ctx);
+          const ar = ts * (1.0 + pulse * 0.12);
+          const ag = ctx.createRadialGradient(ox, base - ts * 0.5, ts * 0.2, ox, base - ts * 0.5, ar * 1.4);
+          ag.addColorStop(0, 'rgba(255,214,10,0.38)');
+          ag.addColorStop(1, 'rgba(255,214,10,0)');
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.fillStyle = ag;
+          ctx.beginPath(); ctx.arc(ox, base - ts * 0.5, ar * 1.4, 0, Math.PI * 2); ctx.fill();
+          ctx.restore();
+          ctx.save();
+          if (hasFilter) { ctx.filter = 'hue-rotate(150deg) saturate(1.9) brightness(1.15)'; glow = null; }
+          else { glow = '#ffd60a'; blur = 26; }
+          const okT = frame(ctx, 'enemies', ENEMY[t], f, ox, base, S * 0.95 * K,
+            { flip, alpha, glow, blur, squash: 1 + pulse * 0.05 });
+          ctx.restore();
+          // barra de HP (4 pips = 2 HP, cada golpe de aura quita ½)
+          const pips = Math.max(0, Math.ceil((obs.hp === undefined ? 2 : obs.hp) * 2));
+          const barY = base - sheets.enemies.ch * S * 0.95 * K - 8;
+          for (let i = 0; i < 4; i++) {
+            ctx.fillStyle = i < pips ? '#ffd60a' : 'rgba(255,255,255,0.18)';
+            ctx.fillRect(ox - 26 + i * 14, barY, 12, 5);
+          }
+          return okT;
         }
         return frame(ctx, 'enemies', ENEMY[t], f, ox, base, S * 0.95,
           { flip, alpha, glow, blur, squash: 1 + pulse * 0.05 });
@@ -3009,7 +3051,7 @@ function generateArena() {
         ctx.strokeRect(dx + 3, dy + 3, ts - 6, ts - 6);
       }
 
-      if (!state.door.unlocked) {
+      if (!state.door.unlocked && state.mapMode !== 'rooms') {
         ctx.fillStyle = '#05040a';
         ctx.font = 'bold 12px sans-serif';
         ctx.textAlign = 'center';
@@ -3108,10 +3150,10 @@ function generateArena() {
         ctx.fill();
         ctx.shadowBlur = 0;
       } else if (obs.type === 'dancer') {
-        const r = ts * (0.31 + beatPulse * 0.07);
+        const r = ts * (0.31 + beatPulse * 0.07) * (obs.turbo ? 2 : 1);
         ctx.beginPath();
         ctx.arc(ox, oy, r, 0, Math.PI * 2);
-        ctx.fillStyle = '#f15bb5';
+        ctx.fillStyle = obs.turbo ? '#ffd60a' : '#f15bb5';
         ctx.fill();
       } else if (obs.type === 'mirror') {
         const r = ts * (0.34 + beatPulse * 0.06);
@@ -4907,6 +4949,283 @@ function generateArena() {
       ctx.beginPath(); ctx.arc(cx, cy, r * 0.82, 0, Math.PI * 2); ctx.stroke();
       ctx.restore();
     }
+  };
+
+
+  // =========================================================================
+  // JEFE DE PISO: DANCER TURBO
+  // En cada nivel del club la escalera queda sellada hasta derrotar al jefe.
+  // Es un dancer normal (mismo movimiento y daño) con 2 HP y doble tamaño.
+  // Se derrota con el aura del modo STEP (cada golpe quita ½ HP).
+  // Al caer: aparecen un NPC Espejo y un Bouncer, y se libera la escalera.
+  // =========================================================================
+  const TURBO_HP = 2;
+  let turboBoss = null;
+
+  function turboSpawn() {
+    turboBoss = null;
+    if (state.mapMode !== 'rooms' || !state.levelTheme || !state.door) return;
+    const size = config.gridSize;
+    const P = state.player, D = state.door;
+    const dist = levelReachable(P.x, P.y);
+    const cells = [];
+    dist.forEach((d, k) => {
+      const x = k % size, y = Math.floor(k / size);
+      if (levelCellTaken(x, y) || state.tiles[y][x] !== 'normal') return;
+      const dd = Math.abs(x - D.x) + Math.abs(y - D.y);
+      const dp = Math.abs(x - P.x) + Math.abs(y - P.y);
+      if (dp < 6 || dd < 2) return;
+      cells.push({ x, y, dd });
+    });
+    if (!cells.length) return;
+    // junto a la escalera (2 a 4 casillas) si se puede; si no, lo más cerca posible
+    let pool = cells.filter(c => c.dd <= 4);
+    if (!pool.length) {
+      const m = Math.min(...cells.map(c => c.dd));
+      pool = cells.filter(c => c.dd === m);
+    }
+    const c = pool[Math.floor(Math.random() * pool.length)];
+    const dirs = levelShuffle([{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }]);
+    const dir = dirs.find(d => !isCellBlocked(c.x + d.x, c.y + d.y)) || dirs[0];
+    turboBoss = { type: 'dancer', turbo: true, hp: TURBO_HP, x: c.x, y: c.y, vx: c.x, vy: c.y,
+                  dir: { x: dir.x, y: dir.y }, charge: 0, isMirroring: false };
+    state.obstacles.push(turboBoss);
+    setTimeout(() => {
+      if (state.screen === 'playing' && turboBoss && state.obstacles.includes(turboBoss))
+        showFeedback('👑 JEFE DE PISO: DANCER TURBO', '#ffd60a');
+    }, 1300);
+  }
+
+  function turboFreeCellsNear(cx, cy) {
+    const size = config.gridSize, P = state.player, D = state.door, out = [];
+    for (let r = 1; r <= 6; r++) {
+      for (let y = cy - r; y <= cy + r; y++) for (let x = cx - r; x <= cx + r; x++) {
+        if (Math.abs(x - cx) + Math.abs(y - cy) !== r) continue;
+        if (x < 0 || y < 0 || x >= size || y >= size) continue;
+        if (isCellBlocked(x, y)) continue;
+        if (D && D.x === x && D.y === y) continue;
+        if (P.x === x && P.y === y) continue;
+        out.push({ x, y, far: Math.abs(x - P.x) + Math.abs(y - P.y) >= 2 ? 0 : 1, r });
+      }
+    }
+    // primero las casillas no pegadas al jugador, luego por cercanía al jefe caído
+    return out.sort((a, b) => (a.far - b.far) || (a.r - b.r));
+  }
+
+  function turboDefeated(boss) {
+    const spots = turboFreeCellsNear(boss.x, boss.y);
+    if (spots[0]) {
+      const m = spots.shift();
+      const dist = Math.abs(m.x - state.player.x) + Math.abs(m.y - state.player.y);
+      state.obstacles.push({ type: 'mirror', x: m.x, y: m.y, vx: m.x, vy: m.y,
+        dir: { x: 1, y: 0 }, charge: 0, isMirroring: dist < 8 });
+    }
+    if (spots[0]) {
+      const b = spots.shift();
+      const dirs = levelShuffle([{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }]);
+      const dir = dirs.find(d => !isCellBlocked(b.x + d.x, b.y + d.y)) || dirs[0];
+      state.obstacles.push({ type: 'bouncer', x: b.x, y: b.y, vx: b.x, vy: b.y,
+        dir: { x: dir.x, y: dir.y }, charge: 0, isMirroring: false });
+    }
+    state.door.unlocked = true;
+    state.shockwaves.push({ x: boss.x, y: boss.y, radius: 0.2, alpha: 0.95 });
+    state.shake = 14;
+    audio.playSfx('door_open');
+    showFeedback('👑 ¡DANCER TURBO DERROTADO!', '#ffd60a');
+    setTimeout(() => {
+      if (state.screen === 'playing') showFeedback('🪜 ¡ESCALERA ABIERTA! ENTRA', '#00f5d4');
+    }, 650);
+    updateDoorUI();
+  }
+
+  function turboCheck() {
+    const b = turboBoss;
+    if (!b || b.defeated || state.obstacles.includes(b)) return;
+    b.defeated = true;
+    turboBoss = null;
+    if (state.door && !state.door.unlocked) turboDefeated(b);
+  }
+
+  // Generar el jefe en cada nivel del club (después de dificultad, multitud e ítems)
+  const _turboPrevGenerateArena = generateArena;
+  generateArena = function() {
+    _turboPrevGenerateArena();
+    turboSpawn();
+  };
+
+  // En el club la puerta ya no se abre clavándose 5 pasos: solo la abre el jefe
+  const _turboPrevAdvanceDoor = advanceDoorSequenceIfAnchored;
+  advanceDoorSequenceIfAnchored = function() {
+    if (state.mapMode === 'rooms') return false;
+    return _turboPrevAdvanceDoor();
+  };
+  const _turboPrevUpdateDoorUI = updateDoorUI;
+  updateDoorUI = function() {
+    _turboPrevUpdateDoorUI();
+    if (state.mapMode === 'rooms') doorBadge.classList.add('hidden');
+  };
+
+  // El único daño a enemigos es el aura del modo STEP: tras cada pulso vemos si cayó el jefe
+  const _turboPrevAura = stepAuraPulse;
+  stepAuraPulse = function() {
+    _turboPrevAura();
+    turboCheck();
+  };
+
+
+  // =========================================================================
+  // CONTROLES: vibración háptica + pad de casilla destino (opciones de Configuración)
+  // =========================================================================
+  const chkHaptics = document.getElementById('chkHaptics');
+  const chkPadTarget = document.getElementById('chkPadTarget');
+  const hapticsSupported = typeof navigator.vibrate === 'function';
+  if (!hapticsSupported) {
+    chkHaptics.disabled = true;
+    document.getElementById('lblHaptics').textContent += ' (no disponible en este dispositivo)';
+  }
+
+  function buzz(pattern) {
+    if (!config.haptics || !hapticsSupported) return;
+    try { navigator.vibrate(pattern); } catch (err) {}
+  }
+
+  function applyControlPrefs() {
+    document.body.classList.toggle('pad-target', !!config.padTarget);
+    canvas.style.touchAction = config.padTarget ? 'none' : '';
+    padTap = null;
+  }
+
+  const _ctrlPrevSync = syncSettingsUI;
+  syncSettingsUI = function() {
+    _ctrlPrevSync();
+    chkHaptics.checked = !!config.haptics;
+    chkPadTarget.checked = !!config.padTarget;
+    applyControlPrefs();
+  };
+  chkHaptics.addEventListener('change', e => {
+    config.haptics = e.target.checked;
+    buzz(30); // confirmación al activarla
+  });
+  chkPadTarget.addEventListener('change', e => {
+    config.padTarget = e.target.checked;
+    applyControlPrefs();
+  });
+
+  // Háptica por acción (se apoya en los mismos eventos que ya disparan los sonidos)
+  const HAPTIC_SFX = {
+    step: 12, anchor_step: 12, anchor_on: [18, 30, 18], anchor_off: 14,
+    slip: [20, 20, 20], sticky: 25, miss: [35, 45, 35], push: 30, pickup: 15,
+    door_tick: 10, door_open: [40, 40, 40, 40, 140]
+  };
+  const _hapPrevSfx = audio.playSfx;
+  audio.playSfx = function(type) {
+    _hapPrevSfx.apply(this, arguments);
+    if (config.haptics && state.screen === 'playing' && HAPTIC_SFX[type]) buzz(HAPTIC_SFX[type]);
+  };
+  // Golpe recibido (resta vida o escudo): vibración más fuerte
+  const _hapPrevDamage = damagePlayer;
+  damagePlayer = function(reason, isMissedBeat) {
+    const l0 = necroState.lives;
+    const sh0 = necroState.slots.shades ? necroState.slots.shades.shield : 0;
+    _hapPrevDamage(reason, isMissedBeat);
+    const sh1 = necroState.slots.shades ? necroState.slots.shades.shield : 0;
+    if (necroState.lives < l0 || sh1 < sh0) buzz([90, 40, 90]);
+  };
+
+  // ---- Pad de casilla destino ----
+  let padTap = null;
+  const PAD_SOLID = ['pillar', 'subwoofer', 'group_mate', 'crowd', 'dj', 'bar'];
+
+  function padCellAt(e) {
+    const r = canvas.getBoundingClientRect();
+    const ts = config.tileSize;
+    const camX = r.width / 2 - (state.player.vx + 0.5) * ts;
+    const camY = r.height / 2 - (state.player.vy + 0.5) * ts;
+    return {
+      x: Math.floor((e.clientX - r.left - camX) / ts),
+      y: Math.floor((e.clientY - r.top - camY) / ts)
+    };
+  }
+
+  canvas.addEventListener('pointerdown', e => {
+    if (!config.padTarget || state.screen !== 'playing') return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const c = padCellAt(e);
+    const t = { id: e.pointerId, sx: e.clientX, sy: e.clientY,
+                dx: c.x - state.player.x, dy: c.y - state.player.y, fired: false, timer: null };
+    t.self = (t.dx === 0 && t.dy === 0);
+    if (t.self) {
+      // casilla del personaje = botón STEP: toque = baila, mantener = clavarse / desclavarse
+      t.timer = setTimeout(() => { t.fired = true; stepToggleLockOnBeat(); }, STEP_HOLD_MS);
+    }
+    padTap = t;
+    e.preventDefault();
+  });
+  canvas.addEventListener('pointerup', e => {
+    const t = padTap;
+    if (!t || t.id !== e.pointerId) return;
+    padTap = null;
+    clearTimeout(t.timer);
+    if (!config.padTarget || state.screen !== 'playing') return;
+    if (t.self) { if (!t.fired) stepDance(); return; }
+    if (Math.hypot(e.clientX - t.sx, e.clientY - t.sy) >= 22) return; // swipe: lo maneja el gesto original
+    if (Math.abs(t.dx) + Math.abs(t.dy) === 1) tryMovePlayer(t.dx, t.dy);
+  });
+  canvas.addEventListener('pointercancel', () => {
+    if (padTap) clearTimeout(padTap.timer);
+    padTap = null;
+  });
+
+  // Marcas de casilla destino alrededor del personaje
+  const _ctrlPrevRender = render;
+  render = function(now) {
+    _ctrlPrevRender(now);
+    if (!config.padTarget || state.screen !== 'playing') return;
+    const dpr = window.devicePixelRatio;
+    const w = canvas.width / dpr, h = canvas.height / dpr, ts = config.tileSize, size = config.gridSize;
+    const P = state.player;
+    const camX = w / 2 - (P.vx + 0.5) * ts, camY = h / 2 - (P.vy + 0.5) * ts;
+    const beatDur = (60 / config.bpm) * 1000;
+    const phase = ((((now - state.lastBeatTime) % beatDur) + beatDur) % beatDur) / beatDur;
+    const pulse = Math.pow(1 - phase, 2.2);
+    ctx.save();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.translate(camX, camY);
+    for (const [dx, dy] of [[0, -1], [-1, 0], [1, 0], [0, 1]]) {
+      const cx = P.x + dx, cy = P.y + dy;
+      if (cx < 0 || cy < 0 || cx >= size || cy >= size) continue;
+      const blocked = state.tiles[cy]?.[cx] === 'wall' ||
+        (state.door && !state.door.unlocked && state.door.x === cx && state.door.y === cy) ||
+        state.obstacles.some(o => o.x === cx && o.y === cy && PAD_SOLID.includes(o.type));
+      const rgb = blocked ? '148,163,184' : '0,245,212';
+      const x0 = cx * ts + 4, y0 = cy * ts + 4, sz = ts - 8;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x0, y0, sz, sz, 8); else ctx.rect(x0, y0, sz, sz);
+      ctx.fillStyle = `rgba(${rgb},${blocked ? 0.06 : 0.1 + 0.14 * pulse})`;
+      ctx.fill();
+      ctx.strokeStyle = `rgba(${rgb},${blocked ? 0.4 : 0.75})`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // flecha indicando la dirección
+      const mx = (cx + 0.5) * ts, my = (cy + 0.5) * ts, a = ts * 0.14;
+      ctx.beginPath();
+      ctx.moveTo(mx + dx * a, my + dy * a);
+      ctx.lineTo(mx - dx * a + dy * a, my - dy * a + dx * a);
+      ctx.lineTo(mx - dx * a - dy * a, my - dy * a - dx * a);
+      ctx.closePath();
+      ctx.fillStyle = `rgba(${rgb},${blocked ? 0.4 : 0.85})`;
+      ctx.fill();
+    }
+    // casilla del personaje = STEP
+    const px = (P.x + 0.5) * ts, py = (P.y + 0.5) * ts;
+    ctx.beginPath();
+    ctx.arc(px, py, ts * (0.5 + 0.04 * pulse), 0, Math.PI * 2);
+    ctx.setLineDash(state.isAnchored ? [] : [5, 4]);
+    ctx.strokeStyle = 'rgba(254,228,64,0.85)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
   };
 
   // Inicializar ítems en suelo para la primera arena generada
