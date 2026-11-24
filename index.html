@@ -194,7 +194,7 @@
   }
 
   /* Controles táctiles D-Pad con botón central de Clavarse */
-  #dpad {
+  #dpad, #dpadLeft {
     position: absolute;
     bottom: 92px;
     right: 14px;
@@ -636,6 +636,39 @@
   #levelBanner .lb-title { font-size: 38px; font-weight: 900; letter-spacing: 6px; }
   #levelBanner .lb-sub { font-size: 13px; font-weight: 800; letter-spacing: 3px; margin-top: 6px; }
 
+
+  /* ===== Pad izquierdo + botón STEP (centro) ===== */
+  #dpadLeft { right: auto; left: 14px; }
+
+  #btnStep {
+    --step: clamp(34px, calc(100vw - 332px), 68px);
+    position: absolute;
+    left: 50%;
+    bottom: calc(166px - var(--step) / 2);
+    transform: translateX(-50%);
+    z-index: 24;
+    width: var(--step);
+    height: var(--step);
+    border-radius: 50%;
+    background: rgba(24, 19, 46, 0.9);
+    border: 2px solid rgba(244, 114, 182, 0.8);
+    color: #f472b6;
+    font-size: clamp(9px, calc(var(--step) * 0.22), 14px);
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    opacity: 0.92;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
+  }
+  #btnStep.holding { background: rgba(244, 114, 182, 0.35); box-shadow: 0 0 14px rgba(244, 114, 182, 0.6); }
+  #btnStep.locked { background: rgba(254, 228, 64, 0.3); border-color: #fee440; color: #fee440; box-shadow: 0 0 12px rgba(254, 228, 64, 0.6); }
+
+  /* Los botones de ítems estaban donde ahora va el pad izquierdo: se suben sobre él */
+  #mobileItemActions { bottom: 248px; }
 </style>
 </head>
 <body>
@@ -715,12 +748,28 @@
     <button class="pad-btn" type="button" data-dir="0,-1">▲</button>
     <div></div>
     <button class="pad-btn" type="button" data-dir="-1,0">◀</button>
-    <button id="btnAnchorPad" class="pad-btn anchor-btn" type="button" title="Clavarse / Desclavarse (1 pulso)">⚓</button>
+    <div></div>
     <button class="pad-btn" type="button" data-dir="1,0">▶</button>
     <div></div>
     <button class="pad-btn" type="button" data-dir="0,1">▼</button>
     <div></div>
   </div>
+
+  <!-- Pad izquierdo (igual al derecho) -->
+  <div id="dpadLeft">
+    <div></div>
+    <button class="pad-btn" type="button" data-dir="0,-1">▲</button>
+    <div></div>
+    <button class="pad-btn" type="button" data-dir="-1,0">◀</button>
+    <div></div>
+    <button class="pad-btn" type="button" data-dir="1,0">▶</button>
+    <div></div>
+    <button class="pad-btn" type="button" data-dir="0,1">▼</button>
+    <div></div>
+  </div>
+
+  <!-- Botón STEP: toque = baila al ritmo; mantener = clavarse / desclavarse -->
+  <button id="btnStep" class="hidden" type="button" title="Toque: baila · Mantener: clavarse / desclavarse">STEP</button>
 
   <!-- Barra de Beats convergentes -->
   <div id="beatBarContainer" class="hidden">
@@ -924,7 +973,7 @@
   const beatFeedback = document.getElementById('beatFeedback');
   const anchorBadge = document.getElementById('anchorBadge');
   const doorBadge = document.getElementById('doorBadge');
-  const btnAnchorPad = document.getElementById('btnAnchorPad');
+  const btnAnchorPad = document.createElement('button'); // botón de anclar eliminado (referencia inerte)
 
   // Motor de Audio Techno (Web Audio API)
   const audio = {
@@ -4716,6 +4765,148 @@ function generateArena() {
       }
     }
     _crowdPrevTryMovePlayer(dx, dy);
+  };
+
+
+  // =========================================================================
+  // MODO STEP
+  // Toque = baila al ritmo (no clava). Mantener = clavarse / desclavarse (toggle).
+  // Estando clavado, cada dirección es un paso de baile. Con combo > 3 aparece un aura que
+  // empuja a los enemigos adyacentes y les quita ½ corazón (todos tienen 1 por defecto).
+  // =========================================================================
+  const STEP_HOLD_MS = 380;
+  const STEP_AURA_MIN_COMBO = 3;                      // aura con combo > 3
+  const STEP_AURA_TYPES = ['bouncer', 'dasher', 'dancer', 'dj_bot'];
+  const btnStep = document.getElementById('btnStep');
+  const dpadLeft = document.getElementById('dpadLeft');
+  let stepSway = 1;
+  let stepLastDance = 0;
+
+  function syncStepControls() {
+    const hide = dpad.classList.contains('hidden');
+    dpadLeft.classList.toggle('hidden', hide);
+    btnStep.classList.toggle('hidden', hide);
+  }
+  new MutationObserver(syncStepControls).observe(dpad, { attributes: true, attributeFilter: ['class'] });
+  syncStepControls();
+
+  function stepAuraPulse() {
+    if (state.combo <= STEP_AURA_MIN_COMBO) return;
+    const P = state.player;
+    state.shockwaves.push({ x: P.x, y: P.y, radius: 0.2, alpha: 0.95 });
+    let hit = 0;
+    for (const o of state.obstacles.slice()) {
+      if (!STEP_AURA_TYPES.includes(o.type)) continue;
+      const dx = o.x - P.x, dy = o.y - P.y;
+      if (Math.abs(dx) > 1 || Math.abs(dy) > 1 || (!dx && !dy)) continue;
+      if (o._auraBeat === state.beatIndex) continue;   // máx. 1 golpe por beat
+      o._auraBeat = state.beatIndex;
+      if (o.hp === undefined) o.hp = 1;                // 1 corazón por defecto
+      o.hp -= 0.5;
+      hit++;
+      if (o.hp <= 0) {
+        const i = state.obstacles.indexOf(o);
+        if (i >= 0) state.obstacles.splice(i, 1);
+        continue;
+      }
+      const tx = o.x + Math.sign(dx), ty = o.y + Math.sign(dy);
+      if (!isCellBlocked(tx, ty, o) && !(tx === P.x && ty === P.y)) { o.x = tx; o.y = ty; }
+    }
+    if (hit) {
+      audio.playSfx('push');
+      showFeedback('✨ AURA: -½ ❤', '#fee440');
+    }
+  }
+
+  function stepDance() {
+    if (state.screen !== 'playing') return;
+    const timing = checkBeatWindow();
+    if (!timing.onBeat) {
+      resetCombo();
+      audio.playSfx('miss');
+      showFeedback('OFF BEAT!', '#ff2a85');
+      return;
+    }
+    state.playerMovedThisBeat = true;
+    state.steps++;
+    state.combo++;
+    if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+    stepSway = -stepSway;
+    state.player.nudgeX = 0.2 * stepSway;
+    state.anchorSquash = 1;
+    stepLastDance = performance.now();
+    audio.playSfx('anchor_step');
+    showFeedback(timing.perfect ? '💃 PERFECT STEP!' : '💃 STEP', '#f472b6');
+    stepAuraPulse();
+    updateHud();
+  }
+
+  // Clavarse/desclavarse al mantener: espera al beat (hasta ~1 s) para no penalizar el combo
+  let stepPending = null;
+  function stepToggleLockOnBeat() {
+    if (state.screen !== 'playing') return;
+    if (checkBeatWindow().onBeat) { toggleAnchor(); return; }
+    let tries = 0;
+    clearInterval(stepPending);
+    stepPending = setInterval(() => {
+      tries++;
+      if (state.screen !== 'playing' || tries > 40) { clearInterval(stepPending); return; }
+      if (checkBeatWindow().onBeat) { clearInterval(stepPending); toggleAnchor(); }
+    }, 25);
+  }
+
+  let stepHoldTimer = null, stepHoldFired = false;
+  btnStep.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    stepHoldFired = false;
+    btnStep.classList.add('holding');
+    clearTimeout(stepHoldTimer);
+    stepHoldTimer = setTimeout(() => { stepHoldFired = true; stepToggleLockOnBeat(); }, STEP_HOLD_MS);
+  });
+  function stepRelease(cancel) {
+    clearTimeout(stepHoldTimer);
+    btnStep.classList.remove('holding');
+    if (!cancel && !stepHoldFired) stepDance();
+    stepHoldFired = true;
+  }
+  btnStep.addEventListener('pointerup', () => stepRelease(false));
+  btnStep.addEventListener('pointerleave', () => { if (!stepHoldFired) stepRelease(true); });
+  btnStep.addEventListener('pointercancel', () => stepRelease(true));
+  btnStep.addEventListener('contextmenu', e => e.preventDefault());
+
+  // Pasos de baile estando clavado: cada dirección dispara el aura
+  const _stepPrevTryMove = tryMovePlayer;
+  tryMovePlayer = function(dx, dy) {
+    const wasLocked = state.isAnchored, before = state.steps;
+    _stepPrevTryMove(dx, dy);
+    if (wasLocked && state.isAnchored && state.steps > before) stepAuraPulse();
+  };
+
+  // Aura visual + indicador de clavado en el botón STEP
+  const _stepPrevRender = render;
+  render = function(now) {
+    _stepPrevRender(now);
+    btnStep.classList.toggle('locked', !!state.isAnchored);
+    const dancing = performance.now() - stepLastDance < 450;
+    if (state.screen === 'playing' && state.combo > STEP_AURA_MIN_COMBO && (state.isAnchored || dancing)) {
+      const dpr = window.devicePixelRatio;
+      const w = canvas.width / dpr, h = canvas.height / dpr, ts = config.tileSize;
+      const cx = w / 2 + state.player.nudgeX * ts, cy = h / 2 + state.player.nudgeY * ts;
+      const r = ts * (1.35 + 0.12 * Math.sin(now / 110));
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(cx, cy, ts * 0.2, cx, cy, r);
+      g.addColorStop(0, 'rgba(254,228,64,0)');
+      g.addColorStop(0.7, 'rgba(254,228,64,0.18)');
+      g.addColorStop(1, 'rgba(255,42,133,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(254,228,64,0.7)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.82, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
   };
 
   // Inicializar ítems en suelo para la primera arena generada
