@@ -674,7 +674,9 @@
   #btnStep.locked { background: rgba(254, 228, 64, 0.3); border-color: #fee440; color: #fee440; box-shadow: 0 0 12px rgba(254, 228, 64, 0.6); }
 
   /* Los botones de ítems estaban donde ahora va el pad izquierdo: se suben sobre él */
-  #mobileItemActions { bottom: 248px; }
+  #mobileItemActions { bottom: 92px; }
+  /* Pad y STEP siempre ocultos: control principal por teclado y swipe touch */
+  #dpad, #dpadLeft, #btnStep, #btnTogglePad { display: none !important; }
   /* Modo pad de casilla destino: se ocultan las cruces y el botón STEP */
   body.pad-target #dpad, body.pad-target #dpadLeft, body.pad-target #btnStep { display: none !important; }
 </style>
@@ -3031,12 +3033,16 @@ function generateArena() {
     const camY = h / 2 - (state.player.vy + 0.5) * ts;
     ctx.translate(camX, camY);
 
+    // El suelo solo empieza a iluminarse con el efecto de beat cuando el combo es >= 4
+    const floorBeatActive = state.combo >= 4;
+    const floorBeatPulse = floorBeatActive ? beatPulse : 0;
+
     const size = config.gridSize;
     for (let gx = 0; gx < size; gx++) {
       for (let gy = 0; gy < size; gy++) {
         const tileType = state.tiles[gy]?.[gx] || 'normal';
-        const isEven = (gx + gy + state.beatIndex) % 2 === 0;
-        if (SPR.drawTile(ctx, tileType, gx, gy, ts, isEven, beatPulse)) continue;
+        const isEven = (gx + gy + (floorBeatActive ? state.beatIndex : 0)) % 2 === 0;
+        if (SPR.drawTile(ctx, tileType, gx, gy, ts, isEven, floorBeatPulse)) continue;
 
         if (tileType === 'wall') {
           ctx.fillStyle = '#120a24';
@@ -3053,7 +3059,7 @@ function generateArena() {
           ctx.fillStyle = isEven ? 'rgba(14, 165, 233, 0.28)' : 'rgba(2, 132, 199, 0.28)';
         } else {
           ctx.fillStyle = isEven
-            ? `rgba(26, 20, 48, ${0.55 + beatPulse * 0.2})`
+            ? `rgba(26, 20, 48, ${0.55 + floorBeatPulse * 0.2})`
             : 'rgba(14, 11, 28, 0.75)';
         }
         ctx.fillRect(gx * ts + 2, gy * ts + 2, ts - 4, ts - 4);
@@ -3084,25 +3090,29 @@ function generateArena() {
       for (let gy = gy0; gy <= gy1; gy++) {
         for (let gx = gx0; gx <= gx1; gx++) {
           const isWall = state.tiles[gy]?.[gx] === 'wall';
-          const even = (gx + gy + state.beatIndex) % 2 === 0;
-          ctx.fillStyle = rgbaOf(isWall ? lvC : (even ? lvA : lvB), isWall ? 0.5 : 0.5 + beatPulse * 0.2);
+          const even = (gx + gy + (floorBeatActive ? state.beatIndex : 0)) % 2 === 0;
+          ctx.fillStyle = rgbaOf(isWall ? lvC : (even ? lvA : lvB), isWall ? 0.5 : 0.5 + floorBeatPulse * 0.2);
           ctx.fillRect(gx * ts, gy * ts, ts, ts);
         }
       }
-      ctx.globalCompositeOperation = 'lighter';
-      for (let gy = gy0; gy <= gy1; gy++) {
-        for (let gx = gx0; gx <= gx1; gx++) {
-          if (state.tiles[gy]?.[gx] === 'wall') continue;
-          if ((gx + gy + state.beatIndex) % 2 !== 0) continue;
-          ctx.fillStyle = rgbaOf(lvA, beatPulse * 0.14);
-          ctx.fillRect(gx * ts, gy * ts, ts, ts);
+      if (floorBeatActive) {
+        ctx.globalCompositeOperation = 'lighter';
+        for (let gy = gy0; gy <= gy1; gy++) {
+          for (let gx = gx0; gx <= gx1; gx++) {
+            if (state.tiles[gy]?.[gx] === 'wall') continue;
+            if ((gx + gy + state.beatIndex) % 2 !== 0) continue;
+            ctx.fillStyle = rgbaOf(lvA, floorBeatPulse * 0.14);
+            ctx.fillRect(gx * ts, gy * ts, ts, ts);
+          }
         }
       }
       ctx.restore();
     }
 
-    // Capa arquitectónica y luminosa de club nocturno en todos los modos
-    renderClubAtmosphereFloor(ctx, now, beatPulse, ts, size, camX, camY, w, h, lvTheme, lvA, lvB, lvC);
+    // Capa arquitectónica y luminosa de club nocturno en todos los modos (iluminación de beat solo con combo >= 4)
+    if (floorBeatActive) {
+      renderClubAtmosphereFloor(ctx, now, floorBeatPulse, ts, size, camX, camY, w, h, lvTheme, lvA, lvB, lvC);
+    }
 
     ctx.strokeStyle = state.dropTimer > 0 ? '#fee440' : (lvTheme ? rgbaOf(lvA, 0.85) : 'rgba(0, 245, 212, 0.45)');
     ctx.lineWidth = 3;
@@ -3606,15 +3616,15 @@ function generateArena() {
   let hudControlsEnabled = false;
 
   function applyHudControlsVisibility() {
-    const show = state.screen === 'playing' && hudControlsEnabled;
-    necroHudRow.classList.toggle('hidden', !show);
-    mobileItemActions.classList.toggle('hidden', !show);
-    if (!hudControlsEnabled) {
-      state.showDpad = false;
-      dpad.classList.add('hidden');
-    } else if (state.screen === 'playing' && state.showDpad && !config.padTarget) {
-      dpad.classList.remove('hidden');
-    }
+    const isPlaying = state.screen === 'playing';
+    const showHud = isPlaying && hudControlsEnabled;
+    necroHudRow.classList.toggle('hidden', !showHud);
+    // Los botones para activar ítems y objetos permanecen visibles durante la partida
+    mobileItemActions.classList.toggle('hidden', !isPlaying);
+    // El pad siempre permanece oculto (control principal: teclado y swipe touch)
+    state.showDpad = false;
+    config.padTarget = false;
+    dpad.classList.add('hidden');
     if (btnToggleHudControls) {
       btnToggleHudControls.textContent = hudControlsEnabled ? 'HUD ON' : 'HUD OFF';
       btnToggleHudControls.classList.toggle('hud-toggle-active', hudControlsEnabled);
@@ -3624,9 +3634,9 @@ function generateArena() {
 
   function setHudControlsEnabled(enabled) {
     hudControlsEnabled = !!enabled;
-    state.showDpad = hudControlsEnabled;
+    state.showDpad = false;
     applyHudControlsVisibility();
-    if (hudControlsEnabled && state.screen === 'playing') {
+    if (state.screen === 'playing') {
       renderNecroHud();
     }
   }
@@ -3934,6 +3944,7 @@ function generateArena() {
     _origShowScreen(name);
     if (name === 'playing') {
       applyHudControlsVisibility();
+      mobileItemActions.classList.remove('hidden');
       renderNecroHud();
     } else {
       necroHudRow.classList.add('hidden');
@@ -5520,6 +5531,119 @@ function generateArena() {
     ctx.restore();
   };
 
+
+  // =========================================================================
+  // INDICADOR VISUAL DE COMBO SOBRE EL PERSONAJE PRINCIPAL
+  // =========================================================================
+  let comboPopScale = 0;
+  let lastRenderedCombo = 1;
+
+  function getComboVisualStyle(combo, now) {
+    if (combo >= 24) {
+      const hue = Math.floor((now * 0.28) % 360);
+      return {
+        fill: `hsl(${hue}, 100%, 66%)`,
+        glow: `hsl(${(hue + 50) % 360}, 100%, 58%)`,
+        stroke: '#12071f',
+        scaleBoost: 1.28,
+        blur: 18
+      };
+    }
+    if (combo >= 16) {
+      return {
+        fill: '#ff2a85',
+        glow: '#ff70a6',
+        stroke: '#090514',
+        scaleBoost: 1.2,
+        blur: 15
+      };
+    }
+    if (combo >= 8) {
+      return {
+        fill: '#fee440',
+        glow: '#fb923c',
+        stroke: '#090514',
+        scaleBoost: 1.14,
+        blur: 13
+      };
+    }
+    if (combo >= 4) {
+      return {
+        fill: '#00f5d4',
+        glow: '#38bdf8',
+        stroke: '#060918',
+        scaleBoost: 1.08,
+        blur: 11
+      };
+    }
+    return {
+      fill: '#cbd5e1',
+      glow: '#94a3b8',
+      stroke: '#06050e',
+      scaleBoost: 1.0,
+      blur: 6
+    };
+  }
+
+  const _comboHeadPrevRender = render;
+  render = function(now) {
+    _comboHeadPrevRender(now);
+    if (state.screen !== 'playing' && state.screen !== 'paused') return;
+
+    const c = state.combo || 1;
+    if (c !== lastRenderedCombo) {
+      if (c > lastRenderedCombo) comboPopScale = 1;
+      lastRenderedCombo = c;
+    }
+    comboPopScale *= 0.84;
+
+    const dpr = window.devicePixelRatio;
+    const w = canvas.width / dpr;
+    const h = canvas.height / dpr;
+    const ts = config.tileSize;
+
+    const beatDuration = (60 / config.bpm) * 1000;
+    const phase = (((now - state.lastBeatTime) % beatDuration) + beatDuration) / beatDuration;
+    const beatPulse = Math.pow(1 - phase, 2.2);
+
+    const px = w / 2 + state.player.nudgeX * ts;
+    const py = h / 2 + state.player.nudgeY * ts;
+    const floatY = Math.sin(now * 0.007) * 2.2 - beatPulse * 3.5;
+    const headY = py - ts * 0.72 + floatY;
+
+    const style = getComboVisualStyle(c, now);
+    const scale = style.scaleBoost + comboPopScale * 0.36 + (c >= 4 ? beatPulse * 0.1 : 0);
+    const fontSize = Math.max(12, Math.round(ts * 0.31));
+
+    ctx.save();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.translate(px, headY);
+    ctx.scale(scale, scale);
+
+    if (c >= 4) {
+      ctx.beginPath();
+      ctx.arc(0, 0, fontSize * (0.72 + beatPulse * 0.2), 0, Math.PI * 2);
+      ctx.fillStyle = style.glow;
+      ctx.globalAlpha = 0.16 + beatPulse * 0.16;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.font = `900 ${fontSize}px 'Segoe UI', system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(3, Math.round(fontSize * 0.22));
+    ctx.strokeStyle = style.stroke;
+    ctx.shadowColor = style.glow;
+    ctx.shadowBlur = style.blur;
+
+    const label = `x${c}`;
+    ctx.strokeText(label, 0, 0);
+    ctx.fillStyle = style.fill;
+    ctx.fillText(label, 0, 0);
+    ctx.restore();
+  };
 
 })();
 </script>
