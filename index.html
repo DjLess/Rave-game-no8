@@ -1300,6 +1300,7 @@
         x1: b.c + 6, y1: b.c + 6,
         cx: b.c, cy: b.c
       };
+      meta.stage = b.scr || null; // pantalla gigante del DJ (sala principal)
       for (const rm of (b.ok || [])) {
         let zone = 'club';
         if (rm.n.includes('DJ') || rm.n.includes('Bóveda')) zone = 'dj';
@@ -1507,6 +1508,34 @@
      const boxes=[[c-9,c-9,c+9,c+9]],rooms=[],pool=lib.filter(r=>r.g.flat().includes('+')),used={};
      const pickRoom=()=>{const wt=pool.map(t=>((t.w>=9&&t.h>=9)?3:1)/(1+2*(used[t.n]||0)));
       let roll=rd()*wt.reduce((s,v)=>s+v,0),i=0;while(i<pool.length-1&&roll>=wt[i]){roll-=wt[i];i++}return pool[i]};
+     // ---- SALA PRINCIPAL: pantalla gigante del DJ + entrada al backstage (sala existente al azar) ----
+     const ori=li===1?'W':'N';                                   // pared donde está el DJ: N (arriba) u W (oeste)
+     const mp=(u,v)=>ori==='N'?[c+u,c-7-v]:[c-7-v,c+u];          // u: a lo largo de la pared, v: hacia afuera (0 = pared)
+     const cin=(d,u)=>ori==='N'?[c+u,c-7+d]:[c-7+d,c+u];         // d: profundidad interior (1 = junto a la pantalla)
+     const dnu=(x,y)=>ori==='N'?[y-(c-7),x-c]:[x-(c-7),y-c];
+     let scr=null,bsRec=null;
+     for(let u=-7;u<=7;u++){const[x,y]=mp(u,0);if(G[y][x].t==='+')G[y][x]={t:'X',own:-1,o:null}}   // la pared de la pantalla no tiene puertas
+     {const eus=[];
+      for(let u=-6;u<=6;u++){if(Math.abs(u)<3)continue;const[x,y]=cin(1,u),e=G[y][x];if(e.t==='.'&&!e.o)eus.push(u)}
+      const combos=[];
+      lib.forEach(t=>{if(Object.values(t.o).some(v=>v[0]==='K'))return;
+       for(let m=0;m<2;m++)for(let k=0;k<4;k++){const r2=tf(t,k,m);if(r2.h!==7)continue;
+        for(let i=0;i<r2.w;i++){if(r2.g[6][i]!=='+'||r2.o[i+',5']||!'.SI'.includes(r2.g[5][i]))continue;
+         eus.forEach(u=>{const ux0=u-i;if(ux0>=-7&&ux0+r2.w-1<=7)combos.push({r2,i,u,ux0})})}}});
+      if(combos.length){
+       const names=[...new Set(combos.map(q=>q.r2.n))],nm=names[rd()*names.length|0],lst=combos.filter(q=>q.r2.n===nm),pk=lst[rd()*lst.length|0];
+       const{r2,i:id,u:eu,ux0}=pk;
+       for(let u=-7;u<=7;u++)for(let v=1;v<=6;v++){const[x,y]=mp(u,v);G[y][x]={t:'X',own:-2,o:null}}
+       for(let j=0;j<7;j++)for(let i=0;i<r2.w;i++){
+        const[x,y]=mp(ux0+i,6-j),ch=r2.g[j][i];
+        if(j===6){if(i===id)G[y][x]={t:'+',own:-1,o:null};continue}
+        if(ch==='X'||ch==='+'){G[y][x]={t:'X',own:-2,o:null};continue}
+        let ob=r2.o[i+','+j]||null;if(ob&&ori==='W')ob=[ob[0],ob[2],ob[1]];
+        G[y][x]={t:ch,own:-2,o:ob}}
+       scr=ori==='N'?{ori,x0:c-7,y0:c-13,w:15,h:6}:{ori,x0:c-13,y0:c-7,w:6,h:15};
+       scr.eu=eu;[scr.nx,scr.ny]=mp(eu,1);[scr.dx,scr.dy]=mp(eu,0);
+       bsRec=ori==='N'?{id:900,n:r2.n,x:c+ux0,y:c-13,w:r2.w,h:7,ds:[],backstage:true}:{id:900,n:r2.n,x:c-13,y:c+ux0,w:7,h:r2.w,ds:[],backstage:true};
+       boxes.push(ori==='N'?[c-8,c-14,c+8,c-8]:[c-14,c-8,c-8,c+8])}}
      for(let a=0;a<K*50&&rooms.length<K;a++){
       const p=pickRoom(),r=free?tf(p,rd()*4|0,rd()<.5):cl(p);if(N-1-r.w<1||N-1-r.h<1)continue;
       const x=1+(rd()*(N-1-r.w)|0),y=1+(rd()*(N-1-r.h)|0),bx=[x-1,y-1,x+r.w+1,y+r.h+1];
@@ -1527,17 +1556,50 @@
      rooms.sort((a,b)=>a.d-b.d);const ok=[];
      for(const rm of rooms){if(link(rm)){conn.add(rm.id);ok.push(rm)}else for(let j=0;j<rm.h;j++)for(let i=0;i<rm.w;i++)G[rm.y+j][rm.x+i]={t:'X',own:0,o:null}}
      ok.forEach(rm=>{if(rm.ds.length>1&&rd()<.6)link(rm)});
+     if(bsRec)ok.push(bsRec);
+     // ---- SALA PRINCIPAL: multitud ~95% hasta 8 casillas detrás del DJ; jugador aparece al fondo ----
+     let Pst=null;
+     {let dK=1;for(let d=1;d<=13;d++)for(let u=-6;u<=6;u++){const[x,y]=cin(d,u);if(G[y][x].o&&G[y][x].o[0]==='K')dK=d}
+      const dz=Math.min(13,dK+8),at=(d,u)=>{const[x,y]=cin(d,u);return G[y][x]};
+      const ID=(d,u)=>(d-1)*13+u+6,inR=(d,u)=>d>=1&&d<=13&&u>=-6&&u<=6;
+      const solid=(d,u)=>{const o=at(d,u).o;return !!(o&&'W#MKQ'.includes(o[0]))};
+      let st=null;
+      fs:for(const dd of [13,12,11])for(const du of [0,1,-1,2,-2,3,-3,4,-4,5,-5,6,-6]){const e=at(dd,du);if(e.t==='.'&&!e.o){st=[dd,du];break fs}}
+      if(!st)st=[13,0];
+      Pst=cin(st[0],st[1]);
+      const sk=ID(st[0],st[1]),dist2=Array(169).fill(1e9),par=Array(169).fill(-1),dn=Array(169).fill(false);dist2[sk]=0;
+      for(;;){let b=-1;for(let k=0;k<169;k++)if(!dn[k]&&dist2[k]<1e9&&(b<0||dist2[k]<dist2[b]))b=k;if(b<0)break;dn[b]=true;
+       const d=(b/13|0)+1,u=b%13-6;
+       [[1,0],[-1,0],[0,1],[0,-1]].forEach(([a,e])=>{const nd=d+a,nu=u+e;if(!inR(nd,nu)||solid(nd,nu))return;
+        const k=ID(nd,nu),cost=dist2[b]+1+(nd<=dz?4:0);if(cost<dist2[k]){dist2[k]=cost;par[k]=b}})}
+      const lane=new Set([sk]);
+      for(let x=c-7;x<=c+7;x++)for(let y=c-7;y<=c+7;y++){
+       if(!(x===c-7||x===c+7||y===c-7||y===c+7))continue;const e=G[y][x];if(e.t!=='+'||e.own!==-1)continue;
+       const ix=x+(x===c-7?1:x===c+7?-1:0),iy=y+(y===c-7?1:y===c+7?-1:0),[d,u]=dnu(ix,iy);
+       if(!inR(d,u)||solid(d,u))continue;const k=ID(d,u);if(dist2[k]>=1e9)continue;
+       for(let q=k;q!==-1;q=par[q])lane.add(q)}
+      const elig=new Set(),open=new Set();let laneZ=0;
+      for(let d=1;d<=13;d++)for(let u=-6;u<=6;u++){const e=at(d,u),k=ID(d,u);
+       if(e.o&&e.o[0]==='C'&&(lane.has(k)||d>dz))e.o=null;
+       if(d<=dz&&e.t==='.'&&(!e.o||e.o[0]==='C')&&!lane.has(k))elig.add(k);
+       else{if(d<=dz&&e.t==='.'&&!e.o&&lane.has(k))laneZ++;if(!solid(d,u))open.add(k)}}
+      let holes=Math.max(1,Math.round(elig.size*0.05));const hs=new Set();
+      while(holes>0){const cand=[];
+       elig.forEach(k=>{if(hs.has(k))return;const d=(k/13|0)+1,u=k%13-6;
+        if([[1,0],[-1,0],[0,1],[0,-1]].some(([a,e])=>inR(d+a,u+e)&&open.has(ID(d+a,u+e))))cand.push(k)});
+       if(!cand.length)break;const k=cand[rd()*cand.length|0];hs.add(k);open.add(k);holes--}
+      elig.forEach(k=>{const d=(k/13|0)+1,u=k%13-6,e=at(d,u);e.o=hs.has(k)?null:['C',1,0]})}
      const dist=new Map([[c*N+c,0]]),q=[[c,c]];let far=[c,c];
-     while(q.length){const[x,y]=q.shift();far=[x,y];[[1,0],[-1,0],[0,1],[0,-1]].forEach(([a,b])=>{const n=G[y+b]?.[x+a];if(n&&n.t!='X'&&!dist.has((y+b)*N+x+a)){dist.set((y+b)*N+x+a,1);q.push([x+a,y+b])}})}
+     while(q.length){const[x,y]=q.shift();far=[x,y];[[1,0],[-1,0],[0,1],[0,-1]].forEach(([a,b])=>{const n=G[y+b]?.[x+a];if(n&&n.t!='X'&&n.own!==-2&&!dist.has((y+b)*N+x+a)){dist.set((y+b)*N+x+a,1);q.push([x+a,y+b])}})}
      const fl=[];G.forEach((r,y)=>r.forEach((e,x)=>{if(e.t!='X'&&!e.o&&(x!=c||y!=c))fl.push([x,y])}));
      let D=null;for(let i=q.length;;){const e=G[far[1]][far[0]];if(!e.o&&(far[0]!=c||far[1]!=c)){D=far}break}
      const V=[];for(let i=0;i<5&&fl.length;i++)V.push(fl.splice(rd()*fl.length|0,1)[0]);
-     return{G,N,c,D,V,n:ok.length,ok,cen:CL.n}}
+     return{G,N,c,D,V,n:ok.length,ok,cen:CL.n,P:Pst,scr}}
     lib.push(...necro());
 
     function toMapString(m) {
-      const { G, N, c, D, V } = m;
-      const tk = ['P@' + c + ',' + c];
+      const { G, N, c, D, V, P } = m;
+      const tk = ['P@' + (P ? P[0] : c) + ',' + (P ? P[1] : c)];
       if (D) tk.push('D@' + D[0] + ',' + D[1]);
       V.forEach(v => tk.push('V@' + v[0] + ',' + v[1]));
       G.forEach((r, y) => r.forEach((e, x) => {
@@ -5287,6 +5349,177 @@ function generateArena() {
   setHudControlsEnabled(false);
   renderNecroHud();
   crowdSpawnCigarettes();
+
+  // =========================================================================
+  // PANTALLA GIGANTE DEL DJ (sala principal del club)
+  // Rectángulo negro detrás de la cabina del DJ con visuales abstractas al ritmo del beat y
+  // con los colores del nivel. Al pasar por la entrada al backstage (detrás de la pantalla)
+  // se vuelve invisible. Es solo dibujo: no toca mecánicas, sprites ni otras funciones.
+  // =========================================================================
+  let djScreenAlpha = 1;
+  const _djScreenPrevRender = render;
+  render = function(now) {
+    _djScreenPrevRender(now);
+    const st = state.clubMeta && state.clubMeta.stage;
+    if (!st || state.mapMode !== 'rooms' || state.screen === 'start') { djScreenAlpha = 1; return; }
+
+    const P = state.player;
+    const behind = P.x >= st.x0 && P.x < st.x0 + st.w && P.y >= st.y0 && P.y < st.y0 + st.h;
+    const target = behind ? 0 : 1;
+    djScreenAlpha += (target - djScreenAlpha) * 0.16;
+    if (Math.abs(target - djScreenAlpha) < 0.01) djScreenAlpha = target;
+    if (djScreenAlpha < 0.02) return;
+
+    const w = canvas.width / window.devicePixelRatio;
+    const h = canvas.height / window.devicePixelRatio;
+    const ts = config.tileSize;
+    const camX = w / 2 - (P.vx + 0.5) * ts;
+    const camY = h / 2 - (P.vy + 0.5) * ts;
+    const X0 = st.x0 * ts, Y0 = st.y0 * ts, Wp = st.w * ts, Hp = st.h * ts;
+    if (X0 + camX > w || X0 + Wp + camX < 0 || Y0 + camY > h || Y0 + Hp + camY < 0) return; // fuera de cuadro
+
+    // Beat y colores del nivel (misma lógica que el render principal)
+    const bd = (60 / config.bpm) * 1000;
+    const phase = (((now - state.lastBeatTime) % bd) + bd) % bd / bd;
+    const bp = Math.pow(1 - phase, 2.2);
+    const pal = (state.levelTheme && state.levelTheme.pal) || [[0, 245, 212], [255, 42, 133], [59, 130, 246]];
+    const n = pal.length, ci = state.beatIndex % n, pi = (state.beatIndex + n - 1) % n, kk = Math.min(1, phase * 5);
+    const mixC = (a, b) => [a[0] + (b[0] - a[0]) * kk, a[1] + (b[1] - a[1]) * kk, a[2] + (b[2] - a[2]) * kk];
+    const cols = [mixC(pal[pi], pal[ci]), mixC(pal[(pi + 1) % n], pal[(ci + 1) % n]), mixC(pal[(pi + 2) % n], pal[(ci + 2) % n])];
+    const rgba = (c, a) => 'rgba(' + Math.round(c[0]) + ',' + Math.round(c[1]) + ',' + Math.round(c[2]) + ',' + a + ')';
+
+    ctx.save();
+    ctx.translate(camX, camY);
+    ctx.globalAlpha = djScreenAlpha;
+
+    // Luz de la pantalla sobre la pista (las 4 casillas frente a ella)
+    {
+      let gx, gy, gw, gh, grad;
+      if (st.ori === 'W') {
+        gx = (st.x0 + st.w + 1) * ts; gy = (st.y0 + 1) * ts; gw = 4 * ts; gh = (st.h - 2) * ts;
+        grad = ctx.createLinearGradient(gx, 0, gx + gw, 0);
+      } else {
+        gx = (st.x0 + 1) * ts; gy = (st.y0 + st.h + 1) * ts; gw = (st.w - 2) * ts; gh = 4 * ts;
+        grad = ctx.createLinearGradient(0, gy, 0, gy + gh);
+      }
+      grad.addColorStop(0, rgba(cols[0], 0.10 + bp * 0.20));
+      grad.addColorStop(1, rgba(cols[0], 0));
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = grad;
+      ctx.fillRect(gx, gy, gw, gh);
+      ctx.restore();
+    }
+
+    // Pantalla: recorte con la entrada al backstage (1 casilla) abierta
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(X0, Y0, Wp, Hp);
+    ctx.rect(st.nx * ts, st.ny * ts, ts, ts);
+    ctx.clip('evenodd');
+    ctx.fillStyle = '#010003';
+    ctx.fillRect(X0, Y0, Wp, Hp);
+
+    // Coordenadas locales: X a lo largo de la pared, Y desde el borde exterior (0) hasta la pared (Hh)
+    if (st.ori === 'W') ctx.transform(0, 1, 1, 0, X0, Y0); else ctx.translate(X0, Y0);
+    const L = st.ori === 'W' ? Hp : Wp, Hh = st.ori === 'W' ? Wp : Hp;
+    const cx = L / 2, cy = Hh * 0.5;
+
+    const bg = ctx.createLinearGradient(0, 0, 0, Hh);
+    bg.addColorStop(0, rgba(cols[1], 0.20 + bp * 0.12));
+    bg.addColorStop(1, rgba(cols[0], 0.08));
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, L, Hh);
+
+    ctx.globalCompositeOperation = 'lighter';
+
+    // Rayos giratorios
+    for (let i = 0; i < 14; i++) {
+      const ang = now * 0.00035 * (i % 2 ? 1 : -1) + i * (Math.PI * 2 / 14);
+      ctx.strokeStyle = rgba(cols[i % 3], 0.10 + bp * 0.22);
+      ctx.lineWidth = ts * (0.10 + 0.08 * bp);
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(ang) * L, cy + Math.sin(ang) * L);
+      ctx.stroke();
+    }
+
+    // Túnel de rectángulos que avanza con el beat
+    const tt = (state.beatIndex + phase) * 0.35;
+    for (let i = 0; i < 7; i++) {
+      const pr = ((i + tt) % 7) / 7;
+      const f = pr * pr * 1.25 + 0.02;
+      const rw = L * f, rh = Hh * f * 1.05;
+      ctx.strokeStyle = rgba(cols[i % 3], Math.sin(pr * Math.PI) * 0.85);
+      ctx.lineWidth = ts * (0.05 + pr * 0.10) + bp * 2;
+      ctx.strokeRect(cx - rw / 2, cy - rh / 2, rw, rh);
+    }
+
+    // Núcleo que late + anillos que se expanden en cada beat
+    const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, Hh * (0.30 + 0.16 * bp));
+    core.addColorStop(0, rgba(cols[0], 0.55 + bp * 0.35));
+    core.addColorStop(1, rgba(cols[0], 0));
+    ctx.fillStyle = core;
+    ctx.beginPath();
+    ctx.arc(cx, cy, Hh * (0.30 + 0.16 * bp), 0, Math.PI * 2);
+    ctx.fill();
+    for (let q = 0; q < 2; q++) {
+      const pq = (phase + q * 0.5) % 1;
+      ctx.strokeStyle = rgba(cols[2], (1 - pq) * 0.6);
+      ctx.lineWidth = ts * 0.07;
+      ctx.beginPath();
+      ctx.arc(cx, cy, Hh * (0.2 + pq * 0.85), 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Barras de ecualizador abstractas en la base
+    const nb = Math.max(8, Math.round(L / (ts * 0.32)));
+    const bwid = L / nb;
+    for (let i = 0; i < nb; i++) {
+      const bh = Hh * 0.30 * (0.25 + 0.75 * Math.abs(Math.sin(i * 0.55 + now * 0.0035 + state.beatIndex * 1.3))) * (0.5 + bp * 0.9);
+      ctx.fillStyle = rgba(cols[Math.floor(i / 6) % 3], 0.55);
+      ctx.fillRect(i * bwid + 1, Hh - bh, bwid - 2, bh);
+    }
+
+    // Destello al golpe del bombo + líneas de escaneo
+    ctx.fillStyle = rgba(cols[0], bp * 0.12);
+    ctx.fillRect(0, 0, L, Hh);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(0,0,0,0.20)';
+    const step = Math.max(3, ts * 0.09);
+    for (let y = 0; y < Hh; y += step) ctx.fillRect(0, y, L, step * 0.38);
+    ctx.restore();
+
+    // Marco LED (sin cerrar la entrada) + marco y rótulo de la entrada al backstage
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(X0 - ts, Y0 - ts, Wp + 2 * ts, Hp + 2 * ts);
+    ctx.rect(st.nx * ts, st.ny * ts, ts, ts);
+    ctx.clip('evenodd');
+    ctx.strokeStyle = rgba(cols[0], 0.9);
+    ctx.lineWidth = Math.max(3, ts * 0.08);
+    ctx.shadowColor = rgba(cols[0], 1);
+    ctx.shadowBlur = 14 + bp * 10;
+    ctx.strokeRect(X0, Y0, Wp, Hp);
+    ctx.restore();
+
+    ctx.save();
+    ctx.strokeStyle = rgba(cols[1], 0.85);
+    ctx.lineWidth = 2;
+    ctx.shadowColor = rgba(cols[1], 1);
+    ctx.shadowBlur = 10;
+    ctx.strokeRect(st.nx * ts + 2, st.ny * ts + 2, ts - 4, ts - 4);
+    ctx.shadowBlur = 0;
+    ctx.font = '900 ' + Math.max(7, Math.floor(ts * 0.13)) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.fillText('BACKSTAGE', (st.nx + 0.5) * ts, (st.ny + 0.5) * ts);
+    ctx.restore();
+
+    ctx.restore();
+  };
+
 
 })();
 </script>
